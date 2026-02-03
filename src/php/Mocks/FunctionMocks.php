@@ -228,6 +228,50 @@ namespace {
         }
     }
 
+    if (!function_exists('mk_option')) {
+        /**
+         * Generate an HTML option element for select dropdowns
+         *
+         * @param string $currentValue Current selected value
+         * @param string $optionValue Option value
+         * @param string $optionText Option display text
+         * @return string HTML option element
+         */
+        function mk_option(string $currentValue, string $optionValue, string $optionText): string
+        {
+            $selected = ($currentValue === $optionValue) ? ' selected' : '';
+            return "<option value=\"$optionValue\"$selected>$optionText</option>";
+        }
+    }
+
+    if (!function_exists('my_disk')) {
+        /**
+         * Get disk information
+         *
+         * @param string $name Disk name
+         * @return array<string, mixed> Disk info
+         */
+        function my_disk(string $name): array
+        {
+            global $disks;
+            return $disks[$name] ?? [];
+        }
+    }
+
+    if (!function_exists('my_share')) {
+        /**
+         * Get share information
+         *
+         * @param string $name Share name
+         * @return array<string, mixed> Share info
+         */
+        function my_share(string $name): array
+        {
+            global $shares;
+            return $shares[$name] ?? [];
+        }
+    }
+
     /**
      * Testable logging function - ALWAYS captures to FunctionMocks for testing.
      * Use this instead of syslog() in plugin code to enable log assertion in tests.

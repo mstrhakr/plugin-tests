@@ -206,14 +206,28 @@ abstract class TestCase extends PHPUnitTestCase
     }
 
     /**
-     * Set image update status
+     * Set image update status (simplified version)
      *
      * @param string $image Image name
      * @param bool $hasUpdate Whether update is available
      */
     protected function mockImageUpdateStatus(string $image, bool $hasUpdate): void
     {
-        DockerUtilMock::setUpdateStatus($image, $hasUpdate ? 'true' : 'false');
+        $localSha = 'sha256:local123';
+        $remoteSha = $hasUpdate ? 'sha256:remote456' : 'sha256:local123';
+        DockerUtilMock::setUpdateStatus($image, $localSha, $remoteSha);
+    }
+
+    /**
+     * Set image update status with specific SHA values
+     *
+     * @param string $image Image name
+     * @param string|null $localSha Local image SHA
+     * @param string|null $remoteSha Remote image SHA
+     */
+    protected function mockUpdateStatus(string $image, ?string $localSha, ?string $remoteSha): void
+    {
+        DockerUtilMock::setUpdateStatus($image, $localSha, $remoteSha);
     }
 
     /**

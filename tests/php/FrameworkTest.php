@@ -11,6 +11,7 @@ namespace PluginTests\Tests;
 use PluginTests\TestCase;
 use PluginTests\Mocks\FunctionMocks;
 use PluginTests\Mocks\GlobalsMock;
+use PluginTests\Mocks\DockerUtilMock;
 
 class FrameworkTest extends TestCase
 {
@@ -141,5 +142,100 @@ class FrameworkTest extends TestCase
         global $shares;
         $this->assertCount(1, $shares);
         $this->assertArrayHasKey('appdata', $shares);
+    }
+
+    // ===========================================
+    // Docker Mock Tests
+    // ===========================================
+
+    public function testDockerUtilEnsureImageTag(): void
+    {
+        // Official image without tag
+        $result = \DockerUtil::ensureImageTag('nginx');
+        $this->assertEquals('library/nginx:latest', $result);
+
+        // Official image with tag
+        $result = \DockerUtil::ensureImageTag('nginx:1.25');
+        $this->assertEquals('library/nginx:1.25', $result);
+
+        // User image without tag
+        $result = \DockerUtil::ensureImageTag('linuxserver/plex');
+        $this->assertEquals('linuxserver/plex:latest', $result);
+
+        // User image with tag
+        $result = \DockerUtil::ensureImageTag('linuxserver/plex:latest');
+        $this->assertEquals('linuxserver/plex:latest', $result);
+    }
+
+    public function testDockerUpdateMock(): void
+    {
+        // Set up mock update status
+        $this->mockUpdateStatus('library/nginx:latest', 'sha256:abc123', 'sha256:abc123');
+        $this->mockUpdateStatus('library/redis:latest', 'sha256:old111', 'sha256:new222');
+
+        $update = new \DockerUpdate();
+
+        // nginx is up to date
+        $update->reloadUpdateStatus('library/nginx:latest');
+        $this->assertTrue($update->getUpdateStatus('library/nginx:latest'));
+
+        // redis has update available
+        $update->reloadUpdateStatus('library/redis:latest');
+        $this->assertFalse($update->getUpdateStatus('library/redis:latest'));
+    }
+
+    public function testDockerClientGetContainers(): void
+    {
+        $this->mockContainers([
+            'nginx_container' => [
+                'Name' => 'nginx_container',
+                'Image' => 'nginx:latest',
+                'State' => 'running',
+            ],
+            'redis_container' => [
+                'Name' => 'redis_container',
+                'Image' => 'redis:latest',
+                'State' => 'stopped',
+            ],
+        ]);
+
+        $client = new \DockerClient();
+        $containers = $client->getDockerContainers();
+
+        $this->assertCount(2, $containers);
+        $this->assertEquals('nginx_container', $containers[0]['Name']);
+    }
+
+    public function testDockerUtilLoadSaveJson(): void
+    {
+        $testPath = '/tmp/test-update-status.json';
+        $testData = [
+            'nginx:latest' => ['local' => 'sha256:abc', 'remote' => 'sha256:abc'],
+        ];
+
+        // Save JSON
+        \DockerUtil::saveJSON($testPath, $testData);
+
+        // Load it back
+        $loaded = \DockerUtil::loadJSON($testPath);
+
+        $this->assertEquals($testData, $loaded);
+    }
+
+    // ===========================================
+    // mk_option Test
+    // ===========================================
+
+    public function testMkOption(): void
+    {
+        // Selected option
+        $result = mk_option('yes', 'yes', 'Yes');
+        $this->assertStringContainsString('selected', $result);
+        $this->assertStringContainsString('value="yes"', $result);
+
+        // Non-selected option
+        $result = mk_option('yes', 'no', 'No');
+        $this->assertStringNotContainsString('selected', $result);
+        $this->assertStringContainsString('value="no"', $result);
     }
 }
