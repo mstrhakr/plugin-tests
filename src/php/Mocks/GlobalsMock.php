@@ -21,13 +21,17 @@ class GlobalsMock
      */
     public static function initialize(): void
     {
-        global $var, $disks, $shares, $users, $dockerClient;
+        global $var, $disks, $shares, $users, $dockerClient, $dockerManPaths, $docroot, $display, $driver;
 
         $var = self::getDefaultVar();
         $disks = [];
         $shares = [];
         $users = [];
         $dockerClient = new MockDockerClient();
+        $docroot = '/usr/local/emhttp';
+        $display = self::getDefaultDisplay();
+        $driver = ['bridge' => 'bridge', 'host' => 'host', 'none' => 'null'];
+        $dockerManPaths = self::getDefaultDockerManPaths();
     }
 
     /**
@@ -36,6 +40,50 @@ class GlobalsMock
     public static function reset(): void
     {
         self::initialize();
+    }
+
+    /**
+     * Set $docroot value
+     *
+     * @param string $path Document root path
+     */
+    public static function setDocroot(string $path): void
+    {
+        global $docroot;
+        $docroot = $path;
+    }
+
+    /**
+     * Set $display values (merged with defaults)
+     *
+     * @param array<string, mixed> $values Values to set
+     */
+    public static function setDisplay(array $values): void
+    {
+        global $display;
+        $display = array_merge($display ?? self::getDefaultDisplay(), $values);
+    }
+
+    /**
+     * Set $dockerManPaths values
+     *
+     * @param array<string, string> $paths Paths to set
+     */
+    public static function setDockerManPaths(array $paths): void
+    {
+        global $dockerManPaths;
+        $dockerManPaths = array_merge($dockerManPaths ?? self::getDefaultDockerManPaths(), $paths);
+    }
+
+    /**
+     * Set $driver (network drivers)
+     *
+     * @param array<string, string> $drivers Network drivers
+     */
+    public static function setDriver(array $drivers): void
+    {
+        global $driver;
+        $driver = $drivers;
     }
 
     /**
@@ -135,6 +183,50 @@ class GlobalsMock
             // Registration
             'regState' => 'REGISTERED',
             'regTy' => 'Plus',
+        ];
+    }
+
+    /**
+     * Get default $display array
+     *
+     * @return array<string, mixed>
+     */
+    public static function getDefaultDisplay(): array
+    {
+        return [
+            'unit' => 'C',
+            'number' => '.,',
+            'scale' => -1,
+            'text' => 0,
+            'raw' => false,
+            'date' => '%Y-%m-%d',
+            'time' => '%H:%M',
+            'critical' => 0,
+            'warning' => 0,
+        ];
+    }
+
+    /**
+     * Get default $dockerManPaths array
+     * Source: /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php
+     *
+     * @return array<string, string>
+     */
+    public static function getDefaultDockerManPaths(): array
+    {
+        global $docroot;
+        $docroot = $docroot ?? '/usr/local/emhttp';
+        return [
+            'autostart-file' => '/var/lib/docker/unraid-autostart',
+            'update-status' => '/var/lib/docker/unraid-update-status.json',
+            'template-repos' => '/boot/config/plugins/dockerMan/template-repos',
+            'templates-user' => '/boot/config/plugins/dockerMan/templates-user',
+            'templates-usb' => '/boot/config/plugins/dockerMan/templates',
+            'images' => '/var/lib/docker/unraid/images',
+            'user-prefs' => '/boot/config/plugins/dockerMan/userprefs.cfg',
+            'plugin' => "$docroot/plugins/dynamix.docker.manager",
+            'images-ram' => "$docroot/state/plugins/dynamix.docker.manager/images",
+            'webui-info' => "$docroot/state/plugins/dynamix.docker.manager/docker.json",
         ];
     }
 }

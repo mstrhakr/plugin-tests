@@ -234,13 +234,13 @@ namespace {
              * @param string $image
              * @return array{strRepo: string, strTag: string}|null
              */
-            private static function splitImage(string $image): ?array
+            protected static function splitImage(string $image): ?array
             {
                 if (false === preg_match('@^(.+/)*([^/:]+)(:[^:/]*)*$@', $image, $newSections) || count($newSections) < 3) {
                     return null;
                 } else {
                     [, $strRepo, $imagePart, $strTag] = array_merge($newSections, ['']);
-                    $strTag = str_replace(':', '', $strTag ?? '');
+                    $strTag = str_replace(':', '', $strTag ?: '');
                     return [
                         'strRepo' => $strRepo . $imagePart,
                         'strTag' => $strTag,
@@ -289,9 +289,16 @@ namespace {
                 }
 
                 // Match Unraid's implementation
-                $objContent = (file_exists($path)) ? json_decode(@file_get_contents($path), true) : [];
-                if (empty($objContent)) {
-                    $objContent = [];
+                if (!file_exists($path)) {
+                    return [];
+                }
+                $content = @file_get_contents($path);
+                if ($content === false) {
+                    return [];
+                }
+                $objContent = json_decode($content, true);
+                if (!is_array($objContent)) {
+                    return [];
                 }
                 return $objContent;
             }
@@ -484,6 +491,12 @@ namespace {
          */
         class DockerClient
         {
+            /** @var list<array<string, mixed>>|null Containers cache */
+            private static ?array $containersCache = null;
+
+            /** @var array<string, array<string, mixed>>|null Images cache */
+            private static ?array $imagesCache = null;
+
             /** @var array<string, mixed> Mock responses */
             private static array $mockResponses = [];
 
@@ -499,44 +512,108 @@ namespace {
             }
 
             /**
-             * Reset all mock responses
+             * Reset all mock responses and caches
              */
             public static function reset(): void
             {
                 self::$mockResponses = [];
+                self::$containersCache = null;
+                self::$imagesCache = null;
             }
 
             /**
-             * Make an API request (returns mock data)
+             * Flush caches
+             */
+            public function flushCaches(): void
+            {
+                self::$containersCache = null;
+                self::$imagesCache = null;
+            }
+
+            /**
+             * Human readable timing
              *
+             * @param int $time Unix timestamp
+             * @return string
+             */
+            public function humanTiming(int $time): string
+            {
+                $time = time() - $time;
+                $tokens = [
+                    31536000 => 'year', 2592000 => 'month', 604800 => 'week',
+                    86400 => 'day', 3600 => 'hour', 60 => 'minute', 1 => 'second'
+                ];
+                foreach ($tokens as $unit => $text) {
+                    if ($time < $unit) continue;
+                    $numberOfUnits = floor($time / $unit);
+                    return $numberOfUnits . ' ' . $text . (($numberOfUnits == 1) ? '' : 's') . ' ago';
+                }
+                return 'just now';
+            }
+
+            /**
+             * Format bytes to human readable
+             *
+             * @param int $size Size in bytes
+             * @return string
+             */
+            public function formatBytes(int $size): string
+            {
+                if ($size == 0) return '0 B';
+                $base = log($size) / log(1024);
+                $suffix = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+                return round(pow(1024, $base - floor($base)), 0) . ' ' . $suffix[(int)floor($base)];
+            }
+
+            /**
+             * Make a Docker JSON API request (mock)
+             *
+             * @param string $url API endpoint
              * @param string $method HTTP method
-             * @param string $endpoint API endpoint
-             * @param array<string, mixed> $params Parameters
-             * @return mixed
+             * @param mixed &$code Response code
+             * @param callable|null $callback Callback
+             * @param bool $unchunk Unchunk response
+             * @param string|null $headers Additional headers
+             * @return array<string, mixed>
              */
-            public function request(string $method, string $endpoint, array $params = []): mixed
-            {
-                return self::$mockResponses[$endpoint] ?? [];
+            public function getDockerJSON(
+                string $url, 
+                string $method = 'GET', 
+                mixed &$code = null,
+                ?callable $callback = null,
+                bool $unchunk = false,
+                ?string $headers = null
+            ): array {
+                $code = true;
+                return self::$mockResponses[$url] ?? [];
             }
 
             /**
-             * Get containers list (raw array)
+             * Check if container exists
              *
-             * @return array<int, array<string, mixed>>
+             * @param string $container Container name
+             * @return bool
              */
-            public function getContainersList(): array
+            public function doesContainerExist(string $container): bool
             {
-                return array_values(DockerUtilMock::getContainers());
+                foreach ($this->getDockerContainers() as $ct) {
+                    if ($ct['Name'] == $container) return true;
+                }
+                return false;
             }
 
             /**
-             * Get Docker containers (Unraid's method name)
+             * Check if image exists
              *
-             * @return array<int, array<string, mixed>>
+             * @param string $image Image name
+             * @return bool
              */
-            public function getDockerContainers(): array
+            public function doesImageExist(string $image): bool
             {
-                return array_values(DockerUtilMock::getContainers());
+                foreach ($this->getDockerImages() as $img) {
+                    if (strpos($img['Tags'][0] ?? '', $image) !== false) return true;
+                }
+                return false;
             }
 
             /**
@@ -544,7 +621,7 @@ namespace {
              *
              * @return array<string, mixed>
              */
-            public function getDockerInfo(): array
+            public function getInfo(): array
             {
                 return [
                     'ServerVersion' => '24.0.0',
@@ -556,22 +633,262 @@ namespace {
             }
 
             /**
+             * Start a container
+             *
+             * @param string $id Container ID
+             * @return bool|string
+             */
+            public function startContainer(string $id): bool|string
+            {
+                self::$containersCache = null;
+                return true;
+            }
+
+            /**
+             * Stop a container
+             *
+             * @param string $id Container ID
+             * @param int|false $t Timeout
+             * @return bool|string
+             */
+            public function stopContainer(string $id, int|false $t = false): bool|string
+            {
+                self::$containersCache = null;
+                return true;
+            }
+
+            /**
+             * Restart a container
+             *
+             * @param string $id Container ID
+             * @return bool|string
+             */
+            public function restartContainer(string $id): bool|string
+            {
+                self::$containersCache = null;
+                return true;
+            }
+
+            /**
+             * Pause a container
+             *
+             * @param string $id Container ID
+             * @return bool|string
+             */
+            public function pauseContainer(string $id): bool|string
+            {
+                self::$containersCache = null;
+                return true;
+            }
+
+            /**
+             * Resume a container
+             *
+             * @param string $id Container ID
+             * @return bool|string
+             */
+            public function resumeContainer(string $id): bool|string
+            {
+                self::$containersCache = null;
+                return true;
+            }
+
+            /**
+             * Remove a container
+             *
+             * @param string $name Container name
+             * @param string|false $id Container ID
+             * @param int|false $cache Cache cleanup level
+             * @return bool|string
+             */
+            public function removeContainer(string $name, string|false $id = false, int|false $cache = false): bool|string
+            {
+                self::$containersCache = null;
+                return true;
+            }
+
+            /**
+             * Pull an image
+             *
+             * @param string $image Image name
+             * @param callable|null $callback Progress callback
+             * @return array<string, mixed>
+             */
+            public function pullImage(string $image, ?callable $callback = null): array
+            {
+                self::$imagesCache = null;
+                return [];
+            }
+
+            /**
+             * Remove an image
+             *
+             * @param string $id Image ID
+             * @return bool|string
+             */
+            public function removeImage(string $id): bool|string
+            {
+                self::$imagesCache = null;
+                return true;
+            }
+
+            /**
+             * Get registry auth info
+             *
+             * @param string $image Image name
+             * @return array<string, string>
+             */
+            public function getRegistryAuth(string $image): array
+            {
+                $image = \DockerUtil::ensureImageTag($image);
+                preg_match('@^([^/]+\.[^/]+/)?([^/]+/)?(.+:)(.+)$@', $image, $matches);
+                $matches = array_pad($matches, 5, '');
+                [, $registry, $repository, $imagePart, $tag] = $matches;
+                return [
+                    'username' => '',
+                    'password' => '',
+                    'registryName' => substr($registry, 0, -1),
+                    'repository' => $repository,
+                    'imageName' => substr($imagePart, 0, -1),
+                    'imageTag' => $tag,
+                    'apiUrl' => empty($registry) ? 'https://registry-1.docker.io/v2/' : 'https://' . $registry . 'v2/',
+                ];
+            }
+
+            /**
+             * Get containers list (raw array)
+             *
+             * @return list<array<string, mixed>>
+             */
+            public function getContainersList(): array
+            {
+                return array_values(DockerUtilMock::getContainers());
+            }
+
+            /**
+             * Get Docker containers (Unraid's method name)
+             *
+             * @return list<array<string, mixed>>
+             */
+            public function getDockerContainers(): array
+            {
+                if (self::$containersCache !== null) {
+                    return self::$containersCache;
+                }
+                self::$containersCache = array_values(DockerUtilMock::getContainers());
+                return self::$containersCache;
+            }
+
+            /**
+             * Get container ID by name
+             *
+             * @param string $container Container name
+             * @return string|null
+             */
+            public function getContainerID(string $container): ?string
+            {
+                foreach ($this->getDockerContainers() as $ct) {
+                    if (preg_match('%' . preg_quote($container, '%') . '%', $ct['Name'])) {
+                        return $ct['Id'] ?? null;
+                    }
+                }
+                return null;
+            }
+
+            /**
+             * Get image ID by name
+             *
+             * @param string $image Image name
+             * @return string|null
+             */
+            public function getImageID(string $image): ?string
+            {
+                if (!strpos($image, ':')) {
+                    $image .= ':latest';
+                }
+                foreach ($this->getDockerImages() as $img) {
+                    foreach ($img['Tags'] ?? [] as $tag) {
+                        if ($image == $tag) {
+                            return $img['Id'];
+                        }
+                    }
+                }
+                return null;
+            }
+
+            /**
+             * Get image name by ID
+             *
+             * @param string $id Image ID
+             * @return string|null
+             */
+            public function getImageName(string $id): ?string
+            {
+                foreach ($this->getDockerImages() as $img) {
+                    if ($img['Id'] == $id) {
+                        return $img['Tags'][0] ?? null;
+                    }
+                }
+                return null;
+            }
+
+            /**
              * Get Docker images
              *
-             * @return array<int, array<string, mixed>>
+             * @return array<string, array<string, mixed>>
              */
             public function getDockerImages(): array
             {
+                if (self::$imagesCache !== null) {
+                    return self::$imagesCache;
+                }
                 $images = [];
                 foreach (DockerUtilMock::getContainers() as $container) {
                     if (isset($container['Image'])) {
-                        $images[] = [
+                        $id = substr(md5($container['Image']), 0, 12);
+                        $images[$id] = [
                             'RepoTags' => [$container['Image']],
-                            'Id' => 'sha256:' . substr(md5($container['Image']), 0, 12),
+                            'Id' => $id,
+                            'Created' => $this->humanTiming(time() - 3600),
+                            'Size' => $this->formatBytes(100 * 1024 * 1024),
+                            'VirtualSize' => $this->formatBytes(100 * 1024 * 1024),
+                            'Repository' => \DockerUtil::parseImageTag($container['Image'])['strRepo'],
+                            'usedBy' => [$container['Name'] ?? ''],
                         ];
                     }
                 }
-                return $images;
+                self::$imagesCache = $images;
+                return self::$imagesCache;
+            }
+
+            /**
+             * Get container details
+             *
+             * @param string $id Container ID
+             * @return array<string, mixed>
+             */
+            public function getContainerDetails(string $id): array
+            {
+                foreach (DockerUtilMock::getContainers() as $container) {
+                    if (($container['Id'] ?? '') === $id || ($container['Name'] ?? '') === $id) {
+                        return $container;
+                    }
+                }
+                return [];
+            }
+
+            /**
+             * Get container log
+             *
+             * @param string $id Container ID
+             * @param callable $callback Log callback
+             * @param int|null $tail Tail lines
+             * @param int|null $since Since timestamp
+             */
+            public function getContainerLog(string $id, callable $callback, ?int $tail = null, ?int $since = null): void
+            {
+                // Mock: return empty log
+                $callback('');
             }
         }
     }
@@ -586,13 +903,13 @@ namespace {
         {
             public bool $verbose = false;
 
-            /** @var array<string, array<string, mixed>> Mock templates */
+            /** @var array<string, list<array<string, mixed>>> Mock templates */
             private static array $templates = [];
 
             /**
              * Set mock templates
              *
-             * @param array<string, array<string, mixed>> $templates
+             * @param array<string, list<array<string, mixed>>> $templates
              */
             public static function setTemplates(array $templates): void
             {
@@ -603,7 +920,7 @@ namespace {
              * Get templates by type
              *
              * @param string $type Template type
-             * @return array<int, array<string, mixed>>
+             * @return list<array<string, mixed>>
              */
             public function getTemplates(string $type): array
             {

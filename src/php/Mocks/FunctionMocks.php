@@ -199,11 +199,141 @@ namespace {
          * Translation function (returns input unchanged in tests)
          *
          * @param string $text Text to translate
+         * @param int $ret Return mode
          * @return string Translated text
          */
-        function _(string $text): string
+        function _(string $text, int $ret = 0): string
         {
             return $text;
+        }
+    }
+
+    if (!function_exists('file_put_contents_atomic')) {
+        /**
+         * Atomic file write (write to temp, then rename)
+         * Source: /usr/local/emhttp/plugins/dynamix/include/Wrappers.php
+         *
+         * @param string $filename File path
+         * @param string $data Data to write
+         * @return int|false Bytes written or false
+         */
+        function file_put_contents_atomic(string $filename, string $data): int|false
+        {
+            $suffix = rand();
+            $tempFile = "$filename$suffix";
+            $writeResult = @file_put_contents($tempFile, $data);
+            if ($writeResult === false || $writeResult !== strlen($data)) {
+                @unlink($tempFile);
+                return false;
+            }
+            if (!@rename($tempFile, $filename)) {
+                @unlink($tempFile);
+                return false;
+            }
+            return strlen($data);
+        }
+    }
+
+    if (!function_exists('my_parse_ini_string')) {
+        /**
+         * Parse INI string with comment handling
+         * Source: /usr/local/emhttp/plugins/dynamix/include/Wrappers.php
+         *
+         * @param string $text INI content
+         * @param bool $sections Process sections
+         * @param int $scanner Scanner mode
+         * @return array<string, mixed>
+         */
+        function my_parse_ini_string(string $text, bool $sections = false, int $scanner = INI_SCANNER_NORMAL): array
+        {
+            $result = parse_ini_string(
+                strip_tags(html_entity_decode(preg_replace('/^#.*$/m', '', $text) ?? '')),
+                $sections,
+                $scanner
+            );
+            return $result ?: [];
+        }
+    }
+
+    if (!function_exists('my_parse_ini_file')) {
+        /**
+         * Parse INI file with comment handling
+         * Source: /usr/local/emhttp/plugins/dynamix/include/Wrappers.php
+         *
+         * @param string $file File path
+         * @param bool $sections Process sections
+         * @param int $scanner Scanner mode
+         * @return array<string, mixed>
+         */
+        function my_parse_ini_file(string $file, bool $sections = false, int $scanner = INI_SCANNER_NORMAL): array
+        {
+            $content = @file_get_contents($file);
+            if ($content === false) {
+                return [];
+            }
+            return my_parse_ini_string($content, $sections, $scanner);
+        }
+    }
+
+    if (!function_exists('getCurlHandle')) {
+        /**
+         * Get a configured cURL handle
+         * Source: /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php
+         *
+         * @param string $url URL to request
+         * @param string $method HTTP method
+         * @param array<int, string> $headers Headers to add
+         * @return \CurlHandle|false
+         */
+        function getCurlHandle(string $url, string $method = 'GET', array $headers = []): \CurlHandle|false
+        {
+            if (empty($url)) {
+                return false;
+            }
+            $ch = curl_init();
+            if ($ch === false) {
+                return false;
+            }
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HEADER, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 15);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 45);
+            if ($method === 'HEAD') {
+                curl_setopt($ch, CURLOPT_NOBODY, true);
+            }
+            if (!empty($headers)) {
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+            }
+            return $ch;
+        }
+    }
+
+    if (!function_exists('addRoute')) {
+        /**
+         * Add route for remote WireGuard access (mock - no-op)
+         * Source: /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php
+         *
+         * @param string $id Container ID
+         */
+        function addRoute(string $id): void
+        {
+            // Mock: do nothing
+        }
+    }
+
+    if (!function_exists('var_split')) {
+        /**
+         * Split variable by space and return element
+         * Source: /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php
+         *
+         * @param string $item Item to split
+         * @param int $i Index to return
+         * @return string
+         */
+        function var_split(string $item, int $i = 0): string
+        {
+            return array_pad(explode(' ', $item), $i + 1, '')[$i];
         }
     }
 
@@ -257,7 +387,8 @@ namespace {
         function my_disk(string $name, bool $raw = false): string
         {
             global $display;
-            return (_var($display, 'raw') || $raw) ? $name : ucfirst(preg_replace('/(\d+)$/', ' $1', $name));
+            $result = preg_replace('/(\d+)$/', ' $1', $name);
+            return (_var($display, 'raw') || $raw) ? $name : ucfirst($result ?? $name);
         }
     }
 
@@ -394,14 +525,17 @@ namespace {
          * Explode with guaranteed array size
          * Source: /usr/local/emhttp/plugins/dynamix/include/Helpers.php
          *
-         * @param string $split Delimiter
+         * @param non-empty-string $split Delimiter
          * @param string $text String to split
          * @param int $count Expected array size
          * @return array<int, string>
          */
         function my_explode(string $split, string $text, int $count = 2): array
         {
-            return array_pad(explode($split, $text ?? "", $count), $count, '');
+            if ($split === '') {
+                return array_pad([], $count, '');
+            }
+            return array_pad(explode($split, $text, $count), $count, '');
         }
     }
 

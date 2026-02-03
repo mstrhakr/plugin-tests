@@ -28,5 +28,9 @@ parameters:
       identifier: variable.undefined
     # Mock functions defined inside conditionals have limited type inference
     - identifier: missingType.iterableValue
-      path: src/php/Mocks/FunctionMocks.php
+    # Mock functions that return false but have union types for interface compatibility
+    -
+      identifier: return.unusedType
+      paths:
+        - src/php/Mocks/FunctionMocks.php
   reportUnmatchedIgnoredErrors: false
