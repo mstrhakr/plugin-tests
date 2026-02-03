@@ -12,6 +12,7 @@ declare(strict_types=1);
 // Load the mock functions
 require_once __DIR__ . '/Mocks/FunctionMocks.php';
 require_once __DIR__ . '/Mocks/GlobalsMock.php';
+require_once __DIR__ . '/Mocks/DockerMock.php';
 require_once __DIR__ . '/Fixtures/defaults.php';
 
 // Initialize default globals

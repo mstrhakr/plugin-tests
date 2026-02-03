@@ -14,6 +14,7 @@ namespace PluginTests;
 use PHPUnit\Framework\TestCase as PHPUnitTestCase;
 use PluginTests\Mocks\GlobalsMock;
 use PluginTests\Mocks\FunctionMocks;
+use PluginTests\Mocks\DockerUtilMock;
 
 abstract class TestCase extends PHPUnitTestCase
 {
@@ -33,6 +34,7 @@ abstract class TestCase extends PHPUnitTestCase
         // Reset all mocks to defaults
         GlobalsMock::reset();
         FunctionMocks::reset();
+        DockerUtilMock::reset();
     }
 
     /**
@@ -50,6 +52,7 @@ abstract class TestCase extends PHPUnitTestCase
 
         GlobalsMock::reset();
         FunctionMocks::reset();
+        DockerUtilMock::reset();
 
         parent::tearDown();
     }
@@ -171,6 +174,46 @@ abstract class TestCase extends PHPUnitTestCase
     private function registerTempDir(string $dir): void
     {
         $this->tempDirs[] = $dir;
+    }
+
+    /**
+     * Mock Docker containers
+     *
+     * @param array<string, array<string, mixed>> $containers Container data keyed by name
+     */
+    protected function mockContainers(array $containers): void
+    {
+        DockerUtilMock::setContainers($containers);
+    }
+
+    /**
+     * Mock a running container
+     *
+     * @param string $name Container name
+     * @param string $image Image name
+     * @param array<string, mixed> $extra Additional container properties
+     */
+    protected function mockRunningContainer(string $name, string $image, array $extra = []): void
+    {
+        $containers = DockerUtilMock::getContainers();
+        $containers[$name] = array_merge([
+            'Name' => $name,
+            'Image' => $image,
+            'State' => 'running',
+            'Status' => 'Up 1 hour',
+        ], $extra);
+        DockerUtilMock::setContainers($containers);
+    }
+
+    /**
+     * Set image update status
+     *
+     * @param string $image Image name
+     * @param bool $hasUpdate Whether update is available
+     */
+    protected function mockImageUpdateStatus(string $image, bool $hasUpdate): void
+    {
+        DockerUtilMock::setUpdateStatus($image, $hasUpdate ? 'true' : 'false');
     }
 
     /**
