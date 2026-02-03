@@ -63,34 +63,34 @@ class GlobalsMock
     /**
      * Set $disks array
      *
-     * @param array<string, array<string, mixed>> $disks
+     * @param array<string, array<string, mixed>> $diskArray
      */
-    public static function setDisks(array $disks): void
+    public static function setDisks(array $diskArray): void
     {
-        global $disks as $globalDisks;
-        $globalDisks = $disks;
+        global $disks;
+        $disks = $diskArray;
     }
 
     /**
      * Set $shares array
      *
-     * @param array<string, array<string, mixed>> $shares
+     * @param array<string, array<string, mixed>> $shareArray
      */
-    public static function setShares(array $shares): void
+    public static function setShares(array $shareArray): void
     {
-        global $shares as $globalShares;
-        $globalShares = $shares;
+        global $shares;
+        $shares = $shareArray;
     }
 
     /**
      * Set $users array
      *
-     * @param array<string, array<string, mixed>> $users
+     * @param array<string, array<string, mixed>> $userArray
      */
-    public static function setUsers(array $users): void
+    public static function setUsers(array $userArray): void
     {
-        global $users as $globalUsers;
-        $globalUsers = $users;
+        global $users;
+        $users = $userArray;
     }
 
     /**

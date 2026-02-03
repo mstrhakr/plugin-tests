@@ -18,6 +18,12 @@ use PluginTests\Mocks\FunctionMocks;
 abstract class TestCase extends PHPUnitTestCase
 {
     /**
+     * Directories to clean up after test
+     * @var array<string>
+     */
+    private array $tempDirs = [];
+
+    /**
      * Set up test environment before each test
      */
     protected function setUp(): void
@@ -34,6 +40,14 @@ abstract class TestCase extends PHPUnitTestCase
      */
     protected function tearDown(): void
     {
+        // Clean up temp directories
+        foreach ($this->tempDirs as $dir) {
+            if (is_dir($dir)) {
+                $this->recursiveDelete($dir);
+            }
+        }
+        $this->tempDirs = [];
+
         GlobalsMock::reset();
         FunctionMocks::reset();
 
@@ -152,32 +166,11 @@ abstract class TestCase extends PHPUnitTestCase
     }
 
     /**
-     * Directories to clean up after test
-     * @var array<string>
-     */
-    private array $tempDirs = [];
-
-    /**
      * Register a temp directory for cleanup
      */
     private function registerTempDir(string $dir): void
     {
         $this->tempDirs[] = $dir;
-    }
-
-    /**
-     * Clean up temp directories
-     */
-    protected function tearDown(): void
-    {
-        foreach ($this->tempDirs as $dir) {
-            if (is_dir($dir)) {
-                $this->recursiveDelete($dir);
-            }
-        }
-        $this->tempDirs = [];
-
-        parent::tearDown();
     }
 
     /**

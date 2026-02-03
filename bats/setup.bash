@@ -84,7 +84,8 @@ create_test_stack() {
     local stack_dir="$TEST_TEMP_DIR/$name"
     
     mkdir -p "$stack_dir"
-    create_test_compose_file "$stack_dir/docker-compose.yml"
+    # Suppress output from create_test_compose_file
+    create_test_compose_file "$stack_dir/docker-compose.yml" > /dev/null
     
     echo "$stack_dir"
 }
