@@ -240,6 +240,7 @@ assert_json_file_field() {
 
 # Assert success (exit code 0)
 assert_success() {
+    # shellcheck disable=SC2154 # status is set by BATS
     if [[ "$status" -ne 0 ]]; then
         echo "Expected success (exit 0), got exit $status"
         echo "Output: $output"

@@ -13,8 +13,8 @@ PLUGIN_TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${PLUGIN_TESTS_DIR}/helpers/mocks.bash"
 source "${PLUGIN_TESTS_DIR}/helpers/assertions.bash"
 
-# Test fixtures directory
-FIXTURES_DIR="${PLUGIN_TESTS_DIR}/fixtures"
+# Test fixtures directory (exported for use in test files)
+export FIXTURES_DIR="${PLUGIN_TESTS_DIR}/fixtures"
 
 # Temp directory for test files (cleaned up automatically)
 TEST_TEMP_DIR=""
@@ -137,5 +137,5 @@ get_logs() {
 
 # Clear captured logs
 clear_logs() {
-    > "$MOCK_LOG_FILE"
+    : > "$MOCK_LOG_FILE"
 }

@@ -29,7 +29,7 @@ reset_all_mocks() {
     MOCK_DOCKER_COMPOSE_EXIT=0
     MOCK_DOCKER_CONTAINERS='[]'
     
-    > "$MOCK_LOG_FILE"
+    : > "$MOCK_LOG_FILE"
     rm -f "$MOCK_RETURNS_FILE".*
 }
 
