@@ -1,0 +1,25 @@
+# Dependencies
+/vendor/
+composer.lock
+
+# PHPUnit
+.phpunit.cache/
+coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+/tmp/
+*.log
+
+# Mock state files
+/plugin-tests-mock.log
+/plugin-tests-returns.*

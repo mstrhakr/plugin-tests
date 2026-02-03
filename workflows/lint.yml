@@ -1,0 +1,103 @@
+name: Lint
+
+on:
+  workflow_call:
+    inputs:
+      php-version:
+        description: 'PHP version to use'
+        required: false
+        default: '8.2'
+        type: string
+      source-directory:
+        description: 'Directory containing source code'
+        required: false
+        default: 'source'
+        type: string
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ${{ inputs.source-directory }}
+          severity: warning
+          format: gcc
+
+  phpstan:
+    name: PHPStan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ inputs.php-version }}
+
+      - name: Install dependencies
+        run: |
+          if [ -f "composer.json" ]; then
+            composer install --prefer-dist --no-progress
+          fi
+
+      - name: Run PHPStan
+        run: |
+          if [ -f "phpstan.neon" ]; then
+            vendor/bin/phpstan analyse
+          else
+            echo "No phpstan.neon found, skipping"
+          fi
+
+  php-cs-fixer:
+    name: PHP Code Style
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: PHP-CS-Fixer
+        uses: docker://oskarstark/php-cs-fixer-ga
+        with:
+          args: --diff --dry-run
+        continue-on-error: true
+
+  commitlint:
+    name: Commit Messages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install commitlint
+        run: |
+          npm install -g commitlint @commitlint/config-conventional
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate commits (push)
+        if: github.event_name == 'push'
+        run: npx commitlint --from HEAD~1 --to HEAD --verbose
+        continue-on-error: true
+
+      - name: Validate commits (PR)
+        if: github.event_name == 'pull_request'
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+        continue-on-error: true

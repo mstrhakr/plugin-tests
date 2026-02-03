@@ -1,0 +1,61 @@
+name: Bash Tests
+
+on:
+  workflow_call:
+    inputs:
+      test-directory:
+        description: 'Directory containing BATS tests'
+        required: false
+        default: 'tests'
+        type: string
+      source-directory:
+        description: 'Directory containing bash scripts to test'
+        required: false
+        default: 'source'
+        type: string
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          scandir: ${{ inputs.source-directory }}
+          severity: warning
+
+  bats:
+    name: BATS Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup BATS
+        uses: bats-core/bats-action@2.0.0
+
+      - name: Install BATS helpers
+        run: |
+          # Install bats-support and bats-assert
+          git clone https://github.com/bats-core/bats-support.git /tmp/bats-support
+          git clone https://github.com/bats-core/bats-assert.git /tmp/bats-assert
+
+      - name: Run BATS tests
+        env:
+          BATS_LIB_PATH: /tmp
+        run: |
+          if [ -d "${{ inputs.test-directory }}" ]; then
+            bats --recursive ${{ inputs.test-directory }}
+          else
+            echo "No test directory found at ${{ inputs.test-directory }}"
+          fi

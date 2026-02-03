@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="src/php/bootstrap.php"
+         colors="true"
+         cacheDirectory=".phpunit.cache">
+    <testsuites>
+        <testsuite name="Framework Tests">
+            <directory>tests/php</directory>
+        </testsuite>
+    </testsuites>
+    <coverage>
+        <report>
+            <html outputDirectory="coverage"/>
+        </report>
+    </coverage>
+    <source>
+        <include>
+            <directory>src/php</directory>
+        </include>
+    </source>
+</phpunit>

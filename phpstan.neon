@@ -1,0 +1,29 @@
+parameters:
+  level: 8
+  fileExtensions:
+    - php
+    - page
+  paths:
+    - src
+  excludePaths:
+    - */vendor/*
+  ignoreErrors:
+    # Platform-specific paths that don't exist in dev environment
+    - messages:
+        - "#/usr/local/emhttp/plugins/.*.php#"
+      identifier: requireOnce.fileNotFound
+    # Platform helper functions (we mock these)
+    - messages:
+        - "#autov#"
+        - "#parse_plugin_cfg#"
+        - "#my_scale_status#"
+        - "#csrf_token#"
+      identifier: function.notFound
+    # Global variables from platform
+    - messages:
+        - "#Variable \\$var might not be defined#"
+        - "#Variable \\$disks might not be defined#"
+        - "#Variable \\$shares might not be defined#"
+        - "#Variable \\$dockerClient might not be defined#"
+      identifier: variable.undefined
+  reportUnmatchedIgnoredErrors: false
