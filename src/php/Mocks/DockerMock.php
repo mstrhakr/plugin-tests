@@ -5,6 +5,10 @@
  *
  * Provides mock implementations of Docker-related classes and functions
  * that exist in the Unraid environment.
+ * 
+ * Based on Unraid's dynamix.docker.manager plugin:
+ * - /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php
+ * - /usr/local/emhttp/plugins/dynamix.docker.manager/include/Helpers.php
  */
 
 declare(strict_types=1);
@@ -12,7 +16,7 @@ declare(strict_types=1);
 namespace PluginTests\Mocks {
 
     /**
-     * Mock for Unraid's DockerUtil class
+     * Mock data store for Unraid's DockerUtil class
      */
     class DockerUtilMock
     {
@@ -25,6 +29,12 @@ namespace PluginTests\Mocks {
         /** @var array<string, string> JSON file storage for loadJSON/saveJSON */
         private static array $jsonFiles = [];
 
+        /** @var string Mock host IP */
+        private static string $hostIP = '192.168.1.100';
+
+        /** @var array<string, string> Network drivers */
+        private static array $networkDrivers = ['bridge' => 'bridge', 'host' => 'host', 'none' => 'null'];
+
         /**
          * Reset all mock data
          */
@@ -33,6 +43,8 @@ namespace PluginTests\Mocks {
             self::$containers = [];
             self::$updateStatus = [];
             self::$jsonFiles = [];
+            self::$hostIP = '192.168.1.100';
+            self::$networkDrivers = ['bridge' => 'bridge', 'host' => 'host', 'none' => 'null'];
         }
 
         /**
@@ -115,12 +127,47 @@ namespace PluginTests\Mocks {
             }
             return json_decode(self::$jsonFiles[$path], true) ?: [];
         }
+
+        /**
+         * Set host IP for testing
+         */
+        public static function setHostIP(string $ip): void
+        {
+            self::$hostIP = $ip;
+        }
+
+        /**
+         * Get host IP
+         */
+        public static function getHostIP(): string
+        {
+            return self::$hostIP;
+        }
+
+        /**
+         * Set network drivers
+         * @param array<string, string> $drivers
+         */
+        public static function setNetworkDrivers(array $drivers): void
+        {
+            self::$networkDrivers = $drivers;
+        }
+
+        /**
+         * Get network drivers
+         * @return array<string, string>
+         */
+        public static function getNetworkDrivers(): array
+        {
+            return self::$networkDrivers;
+        }
     }
 
 } // end namespace PluginTests\Mocks
 
 // ============================================================
 // Global class definitions (mock implementations)
+// Based on actual Unraid source from DockerClient.php
 // ============================================================
 namespace {
 
@@ -130,31 +177,75 @@ namespace {
     if (!class_exists('DockerUtil')) {
         /**
          * Mock DockerUtil class matching Unraid's implementation
+         * Source: /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php
          */
         class DockerUtil
         {
             /**
              * Ensure image has a tag (adds :latest if missing)
+             * Matches Unraid's actual implementation
              *
              * @param string $image Image name
              * @return string Image with tag
              */
             public static function ensureImageTag(string $image): string
             {
-                // If no tag specified, add :latest
-                if (strpos($image, ':') === false) {
-                    // Handle library images (official Docker Hub images)
-                    if (strpos($image, '/') === false) {
-                        return 'library/' . $image . ':latest';
+                extract(static::parseImageTag($image));
+                return "$strRepo:$strTag";
+            }
+
+            /**
+             * Parse image into repo and tag components
+             * Matches Unraid's actual implementation
+             *
+             * @param string $image
+             * @return array{strRepo: string, strTag: string}
+             */
+            public static function parseImageTag(string $image): array
+            {
+                $strRepo = '';
+                $strTag = '';
+                
+                if (strpos($image, 'sha256:') === 0) {
+                    // sha256 was provided instead of actual repo name so truncate it for display
+                    $strRepo = substr($image, 7, 12);
+                } elseif (strpos($image, '/') === false) {
+                    return static::parseImageTag('library/' . $image);
+                } else {
+                    $parsedImage = static::splitImage($image);
+                    if (!empty($parsedImage)) {
+                        $strRepo = $parsedImage['strRepo'];
+                        $strTag = $parsedImage['strTag'];
+                    } else {
+                        // Unprocessable input
+                        $strRepo = $image;
                     }
-                    return $image . ':latest';
                 }
-                // Handle official images with tag but no library/ prefix
-                if (strpos($image, '/') === false) {
-                    $parts = explode(':', $image);
-                    return 'library/' . $parts[0] . ':' . $parts[1];
+                // Add :latest tag to image if it's absent
+                if (empty($strTag)) {
+                    $strTag = 'latest';
                 }
-                return $image;
+                return array_map('trim', ['strRepo' => $strRepo, 'strTag' => $strTag]);
+            }
+
+            /**
+             * Split image string into components
+             *
+             * @param string $image
+             * @return array{strRepo: string, strTag: string}|null
+             */
+            private static function splitImage(string $image): ?array
+            {
+                if (false === preg_match('@^(.+/)*([^/:]+)(:[^:/]*)*$@', $image, $newSections) || count($newSections) < 3) {
+                    return null;
+                } else {
+                    [, $strRepo, $imagePart, $strTag] = array_merge($newSections, ['']);
+                    $strTag = str_replace(':', '', $strTag ?? '');
+                    return [
+                        'strRepo' => $strRepo . $imagePart,
+                        'strTag' => $strTag,
+                    ];
+                }
             }
 
             /**
@@ -184,6 +275,7 @@ namespace {
 
             /**
              * Load JSON from a file
+             * Matches Unraid's actual implementation
              *
              * @param string $path File path
              * @return array<string, mixed>
@@ -196,34 +288,140 @@ namespace {
                     return $mockData;
                 }
 
-                // Fall back to real file if it exists
-                if (is_file($path)) {
-                    $content = file_get_contents($path);
-                    if ($content) {
-                        return json_decode($content, true) ?: [];
-                    }
+                // Match Unraid's implementation
+                $objContent = (file_exists($path)) ? json_decode(@file_get_contents($path), true) : [];
+                if (empty($objContent)) {
+                    $objContent = [];
                 }
-                return [];
+                return $objContent;
             }
 
             /**
              * Save JSON to a file
+             * Matches Unraid's actual implementation
              *
              * @param string $path File path
-             * @param array<string, mixed> $data Data to save
-             * @return bool
+             * @param array<string, mixed> $content Data to save
+             * @return int|false
              */
-            public static function saveJSON(string $path, array $data): bool
+            public static function saveJSON(string $path, array $content): int|false
             {
                 // Store in mock storage
-                DockerUtilMock::setJsonFile($path, $data);
+                DockerUtilMock::setJsonFile($path, $content);
 
-                // Also write to real file if directory exists
-                $dir = dirname($path);
-                if (is_dir($dir)) {
-                    return file_put_contents($path, json_encode($data, JSON_PRETTY_PRINT)) !== false;
+                // Match Unraid's implementation
+                if (!is_dir(dirname($path))) {
+                    mkdir(dirname($path), 0755, true);
                 }
-                return true;
+                return file_put_contents($path, json_encode($content, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+            }
+
+            /**
+             * Execute docker command (mock)
+             *
+             * @param string $cmd Docker command
+             * @param bool $a Return array if true
+             * @return string|array<int, string>
+             */
+            public static function docker(string $cmd, bool $a = false): string|array
+            {
+                // Mock implementation - return empty
+                return $a ? [] : '';
+            }
+
+            /**
+             * Get container IP address
+             *
+             * @param string $name Container name
+             * @param int $version IP version (4 or 6)
+             * @return string
+             */
+            public static function myIP(string $name, int $version = 4): string
+            {
+                $container = DockerUtilMock::getContainers()[$name] ?? null;
+                if ($container && isset($container['IPAddress'])) {
+                    return $container['IPAddress'];
+                }
+                return '';
+            }
+
+            /**
+             * Get network drivers
+             *
+             * @return array<string, string>
+             */
+            public static function driver(): array
+            {
+                return DockerUtilMock::getNetworkDrivers();
+            }
+
+            /**
+             * Get custom networks
+             *
+             * @return array<int, string>
+             */
+            public static function custom(): array
+            {
+                $drivers = DockerUtilMock::getNetworkDrivers();
+                return array_keys(array_filter($drivers, fn($d) => $d === 'bridge' || $d === 'macvlan' || $d === 'ipvlan'));
+            }
+
+            /**
+             * Get network list with subnets
+             *
+             * @param array<int, string> $custom Custom networks
+             * @return array<string, string>
+             */
+            public static function network(array $custom): array
+            {
+                $list = ['bridge' => '', 'host' => '', 'none' => ''];
+                foreach ($custom as $net) {
+                    $list[$net] = '172.17.0.0/16'; // Mock subnet
+                }
+                return $list;
+            }
+
+            /**
+             * Get available CPUs
+             *
+             * @return array<int, string>
+             */
+            public static function cpus(): array
+            {
+                return ['0', '1', '2', '3']; // Mock 4 CPUs
+            }
+
+            /**
+             * Map container to value
+             *
+             * @param string $ct Container name
+             * @param string $type Type to get
+             * @return string
+             */
+            public static function ctMap(string $ct, string $type = 'Name'): string
+            {
+                $container = DockerUtilMock::getContainers()[$ct] ?? null;
+                return $container[$type] ?? '';
+            }
+
+            /**
+             * Get network port
+             *
+             * @return string
+             */
+            public static function port(): string
+            {
+                return 'eth0';
+            }
+
+            /**
+             * Get host IP address
+             *
+             * @return string
+             */
+            public static function host(): string
+            {
+                return DockerUtilMock::getHostIP();
             }
         }
     }
@@ -232,6 +430,7 @@ namespace {
     if (!class_exists('DockerUpdate')) {
         /**
          * Mock DockerUpdate class for checking container image updates
+         * Source: /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerUpdate.php
          */
         class DockerUpdate
         {
@@ -280,7 +479,8 @@ namespace {
     // Create DockerClient mock if needed
     if (!class_exists('DockerClient')) {
         /**
-         * Mock DockerClient for API calls
+         * Mock DockerClient for Docker API calls
+         * Source: /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php
          */
         class DockerClient
         {
@@ -349,7 +549,115 @@ namespace {
                 return [
                     'ServerVersion' => '24.0.0',
                     'OperatingSystem' => 'Slackware 15.0',
+                    'Architecture' => 'x86_64',
+                    'NCPU' => 4,
+                    'MemTotal' => 16 * 1024 * 1024 * 1024,
                 ];
+            }
+
+            /**
+             * Get Docker images
+             *
+             * @return array<int, array<string, mixed>>
+             */
+            public function getDockerImages(): array
+            {
+                $images = [];
+                foreach (DockerUtilMock::getContainers() as $container) {
+                    if (isset($container['Image'])) {
+                        $images[] = [
+                            'RepoTags' => [$container['Image']],
+                            'Id' => 'sha256:' . substr(md5($container['Image']), 0, 12),
+                        ];
+                    }
+                }
+                return $images;
+            }
+        }
+    }
+
+    // Create DockerTemplates mock if needed
+    if (!class_exists('DockerTemplates')) {
+        /**
+         * Mock DockerTemplates for template management
+         * Source: /usr/local/emhttp/plugins/dynamix.docker.manager/include/DockerClient.php
+         */
+        class DockerTemplates
+        {
+            public bool $verbose = false;
+
+            /** @var array<string, array<string, mixed>> Mock templates */
+            private static array $templates = [];
+
+            /**
+             * Set mock templates
+             *
+             * @param array<string, array<string, mixed>> $templates
+             */
+            public static function setTemplates(array $templates): void
+            {
+                self::$templates = $templates;
+            }
+
+            /**
+             * Get templates by type
+             *
+             * @param string $type Template type
+             * @return array<int, array<string, mixed>>
+             */
+            public function getTemplates(string $type): array
+            {
+                return self::$templates[$type] ?? [];
+            }
+
+            /**
+             * Get template value for a repository
+             *
+             * @param string $Repository Docker repository
+             * @param string $field Field to get
+             * @param string $scope Scope
+             * @param string $name Name
+             * @return string|null
+             */
+            public function getTemplateValue(string $Repository, string $field, string $scope = 'all', string $name = ''): ?string
+            {
+                return null;
+            }
+
+            /**
+             * Get user template for container
+             *
+             * @param string $Container Container name
+             * @return string|false
+             */
+            public function getUserTemplate(string $Container): string|false
+            {
+                return false;
+            }
+
+            /**
+             * Download templates from repos
+             *
+             * @param string|null $Dest Destination path
+             * @param string|null $Urls URL file
+             * @return array<string, array<int, string>>|null
+             */
+            public function downloadTemplates(?string $Dest = null, ?string $Urls = null): ?array
+            {
+                return [];
+            }
+
+            /**
+             * Get all container info
+             *
+             * @param bool $reload Reload data
+             * @param bool $com Check community apps
+             * @param bool $communityApplications Use community applications
+             * @return array<string, mixed>
+             */
+            public function getAllInfo(bool $reload = false, bool $com = true, bool $communityApplications = false): array
+            {
+                return [];
             }
         }
     }

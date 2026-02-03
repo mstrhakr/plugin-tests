@@ -228,14 +228,87 @@ class FrameworkTest extends TestCase
 
     public function testMkOption(): void
     {
-        // Selected option
+        // Selected option - actual Unraid uses single quotes
         $result = mk_option('yes', 'yes', 'Yes');
         $this->assertStringContainsString('selected', $result);
-        $this->assertStringContainsString('value="yes"', $result);
+        $this->assertStringContainsString("value='yes'", $result);
 
         // Non-selected option
         $result = mk_option('yes', 'no', 'No');
         $this->assertStringNotContainsString('selected', $result);
-        $this->assertStringContainsString('value="no"', $result);
+        $this->assertStringContainsString("value='no'", $result);
+    }
+
+    // ===========================================
+    // New Helper Function Tests
+    // ===========================================
+
+    public function testVar(): void
+    {
+        $arr = ['foo' => 'bar', 'num' => 42];
+
+        // Key exists
+        $this->assertEquals('bar', _var($arr, 'foo'));
+
+        // Key missing - default
+        $this->assertEquals('default', _var($arr, 'missing', 'default'));
+
+        // Null key returns whole variable
+        $this->assertEquals($arr, _var($arr, null, []));
+
+        // Undefined variable
+        $undefined = null;
+        $this->assertEquals('fallback', _var($undefined, null, 'fallback'));
+    }
+
+    public function testMyScale(): void
+    {
+        $unit = '';
+
+        // Small value
+        $result = my_scale(500, $unit);
+        $this->assertEquals('B', $unit);
+
+        // Kilobytes
+        $result = my_scale(1500, $unit);
+        $this->assertEquals('KB', $unit);
+
+        // Megabytes
+        $result = my_scale(1500000, $unit);
+        $this->assertEquals('MB', $unit);
+
+        // Gigabytes
+        $result = my_scale(1500000000, $unit);
+        $this->assertEquals('GB', $unit);
+    }
+
+    public function testCompress(): void
+    {
+        // Short string unchanged
+        $this->assertEquals('short', compress('short'));
+
+        // Long string compressed
+        $long = 'this is a very long string that needs compression';
+        $result = compress($long, 18, 6);
+        $this->assertLessThanOrEqual(18, mb_strlen($result));
+        $this->assertStringContainsString('...', $result);
+    }
+
+    public function testMyExplode(): void
+    {
+        // Normal split
+        $result = my_explode(':', 'a:b', 2);
+        $this->assertEquals(['a', 'b'], $result);
+
+        // Missing parts padded
+        $result = my_explode(':', 'a', 3);
+        $this->assertEquals(['a', '', ''], $result);
+    }
+
+    public function testAutov(): void
+    {
+        // Non-existent file
+        $result = autov('/nonexistent/file.js', true);
+        $this->assertStringContainsString('?v=', $result);
     }
 }
