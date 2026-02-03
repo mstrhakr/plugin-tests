@@ -35,6 +35,11 @@ abstract class TestCase extends PHPUnitTestCase
         GlobalsMock::reset();
         FunctionMocks::reset();
         DockerUtilMock::reset();
+        
+        // Also reset DockerClient cache if the class exists
+        if (class_exists('DockerClient')) {
+            \DockerClient::reset();
+        }
     }
 
     /**
@@ -53,6 +58,11 @@ abstract class TestCase extends PHPUnitTestCase
         GlobalsMock::reset();
         FunctionMocks::reset();
         DockerUtilMock::reset();
+        
+        // Also reset DockerClient cache if the class exists
+        if (class_exists('DockerClient')) {
+            \DockerClient::reset();
+        }
 
         parent::tearDown();
     }
