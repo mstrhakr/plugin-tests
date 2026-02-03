@@ -134,7 +134,7 @@ namespace {
          *
          * @param string $plugin Plugin name
          * @param bool $default Whether to merge with defaults
-         * @return array<string, mixed> Configuration array
+         * @return array<string, string|int|bool|null> Configuration array
          */
         function parse_plugin_cfg(string $plugin, bool $default = false): array
         {
@@ -239,11 +239,12 @@ namespace {
      */
     function plugin_log(int $priority, string $message, bool $alsoSyslog = true): bool
     {
-        // Determine level name
-        $level = match ($priority) {
-            LOG_ERR, 3 => 'ERROR',
-            LOG_WARNING, 4 => 'WARNING',
-            LOG_DEBUG, 7 => 'DEBUG',
+        // Determine level name - use constants if defined, otherwise use raw values
+        // @phpstan-ignore-next-line
+        $level = match (true) {
+            $priority === (defined('LOG_ERR') ? LOG_ERR : 3) => 'ERROR',
+            $priority === (defined('LOG_WARNING') ? LOG_WARNING : 4) => 'WARNING',
+            $priority === (defined('LOG_DEBUG') ? LOG_DEBUG : 7) => 'DEBUG',
             default => 'INFO',
         };
 
