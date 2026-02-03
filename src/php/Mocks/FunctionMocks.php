@@ -228,7 +228,37 @@ namespace {
         }
     }
 
-    // Register syslog functions if not available
+    /**
+     * Testable logging function - ALWAYS captures to FunctionMocks for testing.
+     * Use this instead of syslog() in plugin code to enable log assertion in tests.
+     *
+     * @param int $priority Log priority (LOG_INFO, LOG_WARNING, LOG_ERR, LOG_DEBUG)
+     * @param string $message Log message
+     * @param bool $alsoSyslog Whether to also call real syslog (default: true in production)
+     * @return bool
+     */
+    function plugin_log(int $priority, string $message, bool $alsoSyslog = true): bool
+    {
+        // Determine level name
+        $level = match ($priority) {
+            LOG_ERR, 3 => 'ERROR',
+            LOG_WARNING, 4 => 'WARNING',
+            LOG_DEBUG, 7 => 'DEBUG',
+            default => 'INFO',
+        };
+
+        // Always capture to mock system for testability
+        FunctionMocks::addLog($level, $message);
+
+        // Optionally also call real syslog if it exists and requested
+        if ($alsoSyslog && function_exists('syslog')) {
+            return \syslog($priority, $message);
+        }
+
+        return true;
+    }
+
+    // Register syslog functions if not available (Windows)
     if (!function_exists('syslog')) {
         define('LOG_INFO', 6);
         define('LOG_WARNING', 4);

@@ -106,9 +106,9 @@ class FrameworkTest extends TestCase
 
     public function testSyslogCapture(): void
     {
-        openlog('test', LOG_PID, LOG_LOCAL7);
-        syslog(LOG_INFO, 'Test syslog message');
-        closelog();
+        // Use plugin_log() which always captures to FunctionMocks for testing
+        // This works on all systems regardless of whether real syslog exists
+        plugin_log(LOG_INFO, 'Test syslog message', false);
 
         $this->assertLogged('Test syslog message');
     }
