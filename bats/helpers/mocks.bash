@@ -78,18 +78,18 @@ mock_get_return() {
 
 # Mock docker command
 docker() {
-    # Log the call
-    echo "docker $*" >> "$MOCK_LOG_FILE"
-    
     case "$1" in
         compose)
             shift
+            # Don't log here - _mock_docker_compose will log the full command
             _mock_docker_compose "$@"
             ;;
         ps)
+            echo "docker $*" >> "$MOCK_LOG_FILE"
             echo "$MOCK_DOCKER_CONTAINERS"
             ;;
         info)
+            echo "docker $*" >> "$MOCK_LOG_FILE"
             if [[ "$MOCK_DOCKER_RUNNING" == "true" ]]; then
                 echo '{"ServerVersion": "24.0.0"}'
             else
@@ -98,6 +98,7 @@ docker() {
             fi
             ;;
         inspect)
+            echo "docker $*" >> "$MOCK_LOG_FILE"
             # Return mock container info
             echo '[{"State": {"Running": true}}]'
             ;;
