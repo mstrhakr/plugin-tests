@@ -181,25 +181,3 @@ jobs:
             ```
           files: ./vsix/*.vsix
           generate_release_notes: true
-
-      - name: Update floating tags
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          
-          TAG=${{ steps.version.outputs.tag }}
-          MAJOR=${{ steps.version.outputs.major }}
-          MINOR=${{ steps.version.outputs.minor }}
-          
-          # Update v{major}.{minor} floating tag (e.g., v0.1)
-          git tag -f "v${MAJOR}.${MINOR}" $TAG
-          git push origin "v${MAJOR}.${MINOR}" --force
-          
-          # Update v{major} floating tag (e.g., v0)
-          git tag -f "v${MAJOR}" $TAG
-          git push origin "v${MAJOR}" --force
-          
-          # Update latest tag
-          git tag -f latest $TAG
-          git push origin latest --force
-

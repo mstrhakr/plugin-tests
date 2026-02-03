@@ -1,0 +1,56 @@
+name: Update Floating Tags
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'  # Only semver tags like v0.1.2
+
+jobs:
+  update-tags:
+    name: Update Floating Tags
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          VERSION=${TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+
+      - name: Update floating tags
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          TAG=${{ steps.version.outputs.tag }}
+          MAJOR=${{ steps.version.outputs.major }}
+          MINOR=${{ steps.version.outputs.minor }}
+          
+          echo "Updating floating tags to point to $TAG"
+          
+          # Update v{major}.{minor} floating tag (e.g., v0.1)
+          git tag -f "v${MAJOR}.${MINOR}" $TAG
+          git push origin "v${MAJOR}.${MINOR}" --force
+          echo "✓ Updated v${MAJOR}.${MINOR}"
+          
+          # Update v{major} floating tag (e.g., v0)
+          git tag -f "v${MAJOR}" $TAG
+          git push origin "v${MAJOR}" --force
+          echo "✓ Updated v${MAJOR}"
+          
+          # Update latest tag
+          git tag -f latest $TAG
+          git push origin latest --force
+          echo "✓ Updated latest"
