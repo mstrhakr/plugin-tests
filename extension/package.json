@@ -1,0 +1,117 @@
+{
+  "name": "plugin-tests",
+  "displayName": "Plugin Tests",
+  "description": "Test runner for Unraid plugin development - BATS and PHPUnit integration with Docker support",
+  "version": "0.1.0",
+  "publisher": "mstrhakr",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mstrhakr/plugin-tests"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Testing"
+  ],
+  "keywords": [
+    "bats",
+    "bash",
+    "phpunit",
+    "php",
+    "testing",
+    "unraid",
+    "plugin"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/*.bats",
+    "workspaceContains:**/*Test.php",
+    "workspaceContains:**/*.bats",
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Plugin Tests",
+      "properties": {
+        "pluginTests.workspaceFolders": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "List of workspace folder names to include (empty = all folders)"
+        },
+        "pluginTests.bats.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable BATS test discovery and execution"
+        },
+        "pluginTests.bats.pattern": {
+          "type": "string",
+          "default": "**/*.bats",
+          "description": "Glob pattern for discovering BATS test files"
+        },
+        "pluginTests.bats.exclude": {
+          "type": "string",
+          "default": "**/node_modules/**",
+          "description": "Glob pattern to exclude from BATS test discovery"
+        },
+        "pluginTests.bats.useDocker": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run BATS tests in Docker container for consistency"
+        },
+        "pluginTests.bats.dockerImage": {
+          "type": "string",
+          "default": "bats/bats:latest",
+          "description": "Docker image to use for running BATS tests"
+        },
+        "pluginTests.phpunit.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable PHPUnit test discovery and execution"
+        },
+        "pluginTests.phpunit.pattern": {
+          "type": "string",
+          "default": "**/*Test.php",
+          "description": "Glob pattern for discovering PHPUnit test files"
+        },
+        "pluginTests.phpunit.exclude": {
+          "type": "string",
+          "default": "**/vendor/**",
+          "description": "Glob pattern to exclude from PHPUnit test discovery"
+        },
+        "pluginTests.phpunit.executable": {
+          "type": "string",
+          "default": "vendor/bin/phpunit",
+          "description": "Path to PHPUnit executable (relative to workspace)"
+        },
+        "pluginTests.timeout": {
+          "type": "number",
+          "default": 30000,
+          "description": "Test execution timeout in milliseconds"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "@vscode/test-cli": "^0.0.4",
+    "@vscode/test-electron": "^2.3.8",
+    "@vscode/vsce": "^2.22.0",
+    "esbuild": "^0.19.8",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2"
+  }
+}
