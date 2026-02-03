@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
 
@@ -121,3 +123,83 @@ jobs:
 
       - name: Run example BATS tests
         run: bats examples/bash/
+
+  # ============================================
+  # Release - Publish on tags
+  # ============================================
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [framework-php-tests, shellcheck, extension-build, example-tests]
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: plugin-tests-vsix
+          path: ./vsix
+
+      - name: Get version from tag
+        id: version
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          # Extract major.minor.patch
+          VERSION=${TAG#v}
+          MAJOR=$(echo $VERSION | cut -d. -f1)
+          MINOR=$(echo $VERSION | cut -d. -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "major=$MAJOR" >> $GITHUB_OUTPUT
+          echo "minor=$MINOR" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Plugin Tests ${{ steps.version.outputs.tag }}"
+          body: |
+            ## Plugin Tests ${{ steps.version.outputs.tag }}
+            
+            ### Installation
+            
+            **VS Code Extension:**
+            1. Download `plugin-tests-*.vsix` below
+            2. In VS Code: Extensions → ⋯ → Install from VSIX
+            
+            **Test Framework (submodule):**
+            ```bash
+            # Pin to exact version
+            git submodule add -b ${{ steps.version.outputs.tag }} https://github.com/mstrhakr/plugin-tests.git tests/framework
+            
+            # Or pin to minor version (gets patches)
+            git submodule add -b v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }} https://github.com/mstrhakr/plugin-tests.git tests/framework
+            ```
+          files: ./vsix/*.vsix
+          generate_release_notes: true
+
+      - name: Update floating tags
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          TAG=${{ steps.version.outputs.tag }}
+          MAJOR=${{ steps.version.outputs.major }}
+          MINOR=${{ steps.version.outputs.minor }}
+          
+          # Update v{major}.{minor} floating tag (e.g., v0.1)
+          git tag -f "v${MAJOR}.${MINOR}" $TAG
+          git push origin "v${MAJOR}.${MINOR}" --force
+          
+          # Update v{major} floating tag (e.g., v0)
+          git tag -f "v${MAJOR}" $TAG
+          git push origin "v${MAJOR}" --force
+          
+          # Update latest tag
+          git tag -f latest $TAG
+          git push origin latest --force
+
