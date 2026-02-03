@@ -93,9 +93,11 @@ plugin-tests/
 │   │   └── assertions.bash     # Custom assertions
 │   └── fixtures/               # Test data
 │
-├── docker/                     # Test environment
-│   ├── Dockerfile
-│   └── docker-compose.yml
+├── bin/                        # Cross-platform test runners
+│   ├── run-bats.cmd            # Windows BATS runner (Docker)
+│   ├── run-bats.sh             # Unix BATS runner (Docker)
+│   ├── run-tests.cmd           # Windows full test runner
+│   └── run-tests.sh            # Unix full test runner
 │
 ├── workflows/                  # Reusable GitHub Actions
 │   ├── test-php.yml
@@ -149,7 +151,33 @@ git submodule add https://github.com/mstrhakr/plugin-tests.git tests/framework
 </phpunit>
 ```
 
-### 4. Use Reusable Workflows
+### 4. Configure VS Code (Optional)
+
+Add to `.vscode/settings.json` for IDE test integration:
+
+```json
+{
+    "phpunit.php": "php",
+    "phpunit.phpunit": "vendor/bin/phpunit",
+    "bats-test-runner.testPattern": "**/*.bats",
+    "bats-test-runner.batsExecutable": "${workspaceFolder}/tests/framework/bin/run-bats.cmd"
+}
+```
+
+### 5. Running Tests
+
+```powershell
+# PHP tests (native)
+php vendor/bin/phpunit
+
+# BATS tests (via Docker)
+tests/framework/bin/run-bats.cmd tests/unit/*.bats
+
+# All tests (via Docker for consistency)
+tests/framework/bin/run-tests.cmd all
+```
+
+### 6. Use Reusable Workflows
 
 ```yaml
 # .github/workflows/test.yml
