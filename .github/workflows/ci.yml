@@ -158,6 +158,25 @@ jobs:
           echo "major=$MAJOR" >> $GITHUB_OUTPUT
           echo "minor=$MINOR" >> $GITHUB_OUTPUT
 
+      - name: Update floating tags
+        run: |
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          MAJOR=${{ steps.version.outputs.major }}
+          MINOR=${{ steps.version.outputs.minor }}
+          
+          # Create/move v0.2 style tag (minor floating)
+          git tag -f "v${MAJOR}.${MINOR}" ${{ github.sha }}
+          git push -f origin "v${MAJOR}.${MINOR}"
+          
+          # Create/move v0 style tag (major floating)  
+          git tag -f "v${MAJOR}" ${{ github.sha }}
+          git push -f origin "v${MAJOR}"
+          
+          echo "Updated floating tags: v${MAJOR}.${MINOR} and v${MAJOR}"
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
