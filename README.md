@@ -78,10 +78,14 @@ load '../framework/bats/setup'
 plugin-tests/
 ├── src/php/                    # PHP mock library
 │   ├── bootstrap.php           # Test bootstrap with function mocks
+│   ├── PluginBootstrap.php     # Easy plugin initialization
+│   ├── helpers.php             # includeWithSwitch() and helpers
 │   ├── TestCase.php            # Base PHPUnit test class
+│   ├── StreamWrapper/
+│   │   └── UnraidStreamWrapper.php  # Path interception for real files
 │   ├── Mocks/
 │   │   ├── GlobalsMock.php     # $var, $disks, $shares
-│   │   ├── FunctionMock.php    # parse_plugin_cfg, autov, etc.
+│   │   ├── FunctionMocks.php   # parse_plugin_cfg, plugin(), Markdown(), etc.
 │   │   └── DockerMock.php      # Docker API mocking
 │   └── Fixtures/
 │       └── defaults.php        # Default mock values
@@ -138,7 +142,34 @@ git submodule add https://github.com/mstrhakr/plugin-tests.git tests/framework
 }
 ```
 
-### 3. Create phpunit.xml
+### 3. Create tests/bootstrap.php (Recommended)
+
+Use `PluginBootstrap` for easy setup with automatic path mapping:
+
+```php
+<?php
+require_once __DIR__ . '/framework/src/php/bootstrap.php';
+
+use PluginTests\PluginBootstrap;
+
+PluginBootstrap::init(
+    'myplugin',                              // Plugin name
+    __DIR__ . '/../source/myplugin/php',     // Source PHP directory
+    [
+        'config' => [                        // Default config values
+            'SETTING1' => 'value1',
+        ],
+    ]
+);
+```
+
+This automatically:
+- Maps all PHP files to their Unraid paths
+- Mocks common Unraid system files (Wrappers.php, DockerClient.php, etc.)
+- Sets up temp directories for testing
+- Enables testing REAL plugin code without modifications
+
+### 4. Create phpunit.xml
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>

@@ -737,4 +737,62 @@ namespace {
         }
     }
 
+    // ========================================
+    // Unraid Plugin Helper Functions
+    // ========================================
+
+    /**
+     * Mock for Unraid's plugin() function from PluginHelpers.php
+     * Retrieves plugin information based on action type.
+     */
+    if (!function_exists('plugin')) {
+        function plugin(string $action, string $path): string
+        {
+            // Extract plugin name from path
+            $pluginFile = basename($path);
+            $pluginName = str_replace('.plg', '', $pluginFile);
+
+            return match ($action) {
+                'version' => '1.0.0-test',
+                'changes' => 'Test changes for ' . $pluginName,
+                'pluginURL' => 'https://github.com/test/' . $pluginName,
+                'launch' => '',  // Usually returns launch path or empty
+                'support' => 'https://forums.unraid.net/topic/test/' . $pluginName,
+                'icon' => '',
+                'readme' => '',
+                default => '',
+            };
+        }
+    }
+
+    /**
+     * Mock for Unraid's Markdown() function from Markdown.php
+     * Converts markdown text to HTML.
+     */
+    if (!function_exists('Markdown')) {
+        function Markdown(?string $text): string
+        {
+            if ($text === null || $text === '') {
+                return '';
+            }
+            // If Parsedown is available (from mock or real), use it
+            if (class_exists('Parsedown', false)) {
+                $parsedown = new \Parsedown();
+                return $parsedown->text($text);
+            }
+            // Simple fallback - just return text with basic formatting
+            return nl2br(htmlspecialchars($text));
+        }
+    }
+
+    /**
+     * Lowercase alias for Markdown() - some plugins use this
+     */
+    if (!function_exists('markdown')) {
+        function markdown(?string $text): string
+        {
+            return Markdown($text);
+        }
+    }
+
 } // end global namespace
