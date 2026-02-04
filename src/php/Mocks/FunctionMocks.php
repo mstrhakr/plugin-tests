@@ -28,6 +28,12 @@ namespace PluginTests\Mocks {
         /** @var array<string, mixed> Scale status values */
         private static array $scaleStatus = [];
 
+        /** @var array<string, array<string, string>> Plugin attributes indexed by file path */
+        private static array $pluginAttributes = [];
+
+        /** @var array<string, string> Plugin command outputs for 'dump', 'changes', etc. */
+        private static array $pluginCommandOutputs = [];
+
         /**
          * Reset all mocks to defaults
          */
@@ -37,6 +43,8 @@ namespace PluginTests\Mocks {
             self::$logs = [];
             self::$csrfToken = 'test-csrf-token-12345';
             self::$scaleStatus = [];
+            self::$pluginAttributes = [];
+            self::$pluginCommandOutputs = [];
         }
 
         /**
@@ -117,6 +125,76 @@ namespace PluginTests\Mocks {
         {
             return self::$scaleStatus;
         }
+
+        /**
+         * Set plugin attributes for a plugin file
+         * 
+         * These are the attributes from a .plg file's XML root element.
+         * Common attributes: name, author, version, pluginURL, launch, icon, support, unRAID
+         *
+         * @param string $pluginFile Path to the plugin file (e.g., /var/log/plugins/example.plg)
+         * @param array<string, string> $attributes Plugin attributes
+         */
+        public static function setPluginAttributes(string $pluginFile, array $attributes): void
+        {
+            self::$pluginAttributes[$pluginFile] = $attributes;
+        }
+
+        /**
+         * Get plugin attributes for a plugin file
+         *
+         * @param string $pluginFile Path to the plugin file
+         * @return array<string, string>|null Attributes array or null if not set
+         */
+        public static function getPluginAttributes(string $pluginFile): ?array
+        {
+            return self::$pluginAttributes[$pluginFile] ?? null;
+        }
+
+        /**
+         * Get a specific plugin attribute
+         *
+         * @param string $pluginFile Path to the plugin file
+         * @param string $attribute Attribute name (version, name, pluginURL, etc.)
+         * @return string|false Attribute value or false if not found
+         */
+        public static function getPluginAttribute(string $pluginFile, string $attribute): string|false
+        {
+            if (!isset(self::$pluginAttributes[$pluginFile])) {
+                return false;
+            }
+            return self::$pluginAttributes[$pluginFile][$attribute] ?? false;
+        }
+
+        /**
+         * Set output for a plugin command (dump, changes, alert, validate, check, etc.)
+         *
+         * @param string $method Command method
+         * @param string $pluginFile Plugin file path (or empty for global commands)
+         * @param string|false $output Command output (false means command failed)
+         */
+        public static function setPluginCommandOutput(string $method, string $pluginFile, string|false $output): void
+        {
+            $key = "$method:$pluginFile";
+            if ($output === false) {
+                unset(self::$pluginCommandOutputs[$key]);
+            } else {
+                self::$pluginCommandOutputs[$key] = $output;
+            }
+        }
+
+        /**
+         * Get output for a plugin command
+         *
+         * @param string $method Command method
+         * @param string $pluginFile Plugin file path
+         * @return string|false Command output or false if not set
+         */
+        public static function getPluginCommandOutput(string $method, string $pluginFile): string|false
+        {
+            $key = "$method:$pluginFile";
+            return self::$pluginCommandOutputs[$key] ?? false;
+        }
     }
 
 } // end namespace PluginTests\Mocks
@@ -127,6 +205,45 @@ namespace PluginTests\Mocks {
 namespace {
 
     use PluginTests\Mocks\FunctionMocks;
+
+    if (!function_exists('plugin')) {
+        /**
+         * Mock implementation of Unraid's plugin() function
+         * 
+         * Source: /usr/local/emhttp/plugins/dynamix.plugin.manager/include/PluginHelpers.php
+         *
+         * The plugin() function is used to:
+         * 1. Execute plugin commands (dump, changes, alert, validate, check, checkall, update, remove, install)
+         * 2. Retrieve plugin attributes from .plg XML files (version, name, pluginURL, author, icon, support, etc.)
+         *
+         * @param string $method Method/attribute name
+         * @param string $arg Plugin file path (optional for some methods)
+         * @param bool $dontCache Whether to bypass cache (default false)
+         * @return string|false Result or false on failure
+         */
+        function plugin(string $method, string $arg = '', bool $dontCache = false): string|false
+        {
+            // Methods that execute commands (would use exec() in real implementation)
+            static $commandMethods = ['dump', 'changes', 'alert', 'validate', 'check', 'checkall', 'update', 'remove', 'install'];
+
+            if (in_array($method, $commandMethods) || !$arg || $dontCache) {
+                // Return mocked command output if set
+                return FunctionMocks::getPluginCommandOutput($method, $arg);
+            }
+
+            // For attribute requests, check if plugin file exists and return attribute
+            if ($method === 'attributes') {
+                $attrs = FunctionMocks::getPluginAttributes($arg);
+                if ($attrs === null) {
+                    return false;
+                }
+                return json_encode($attrs) ?: false;
+            }
+
+            // Return specific attribute value
+            return FunctionMocks::getPluginAttribute($arg, $method);
+        }
+    }
 
     if (!function_exists('parse_plugin_cfg')) {
         /**

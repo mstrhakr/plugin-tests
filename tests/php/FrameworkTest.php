@@ -311,4 +311,82 @@ class FrameworkTest extends TestCase
         $result = autov('/nonexistent/file.js', true);
         $this->assertStringContainsString('?v=', $result);
     }
+
+    // =====================================================
+    // Tests for plugin() mock
+    // =====================================================
+
+    public function testPluginAttributeVersion(): void
+    {
+        FunctionMocks::setPluginAttributes('/var/log/plugins/test.plg', [
+            'version' => '2024.01.15',
+            'name' => 'Test Plugin',
+            'author' => 'Test Author',
+        ]);
+
+        $version = plugin('version', '/var/log/plugins/test.plg');
+        $this->assertEquals('2024.01.15', $version);
+    }
+
+    public function testPluginAttributeName(): void
+    {
+        FunctionMocks::setPluginAttributes('/var/log/plugins/test.plg', [
+            'version' => '2024.01.15',
+            'name' => 'Test Plugin',
+            'pluginURL' => 'https://example.com/test.plg',
+        ]);
+
+        $name = plugin('name', '/var/log/plugins/test.plg');
+        $this->assertEquals('Test Plugin', $name);
+
+        $url = plugin('pluginURL', '/var/log/plugins/test.plg');
+        $this->assertEquals('https://example.com/test.plg', $url);
+    }
+
+    public function testPluginAttributeReturnsFalseWhenNotSet(): void
+    {
+        $result = plugin('version', '/var/log/plugins/nonexistent.plg');
+        $this->assertFalse($result);
+    }
+
+    public function testPluginAttributeReturnsFalseForMissingAttribute(): void
+    {
+        FunctionMocks::setPluginAttributes('/var/log/plugins/test.plg', [
+            'version' => '1.0.0',
+        ]);
+
+        // Request an attribute that doesn't exist
+        $result = plugin('support', '/var/log/plugins/test.plg');
+        $this->assertFalse($result);
+    }
+
+    public function testPluginAttributesReturnsJson(): void
+    {
+        FunctionMocks::setPluginAttributes('/var/log/plugins/test.plg', [
+            'version' => '1.0.0',
+            'name' => 'Test',
+        ]);
+
+        $result = plugin('attributes', '/var/log/plugins/test.plg');
+        $this->assertIsString($result);
+
+        $decoded = json_decode($result, true);
+        $this->assertEquals('1.0.0', $decoded['version']);
+        $this->assertEquals('Test', $decoded['name']);
+    }
+
+    public function testPluginCommandOutput(): void
+    {
+        FunctionMocks::setPluginCommandOutput('changes', '/var/log/plugins/test.plg', "Version 1.0.1\n- Bug fixes\n- New feature");
+
+        $result = plugin('changes', '/var/log/plugins/test.plg');
+        $this->assertStringContainsString('Version 1.0.1', $result);
+        $this->assertStringContainsString('Bug fixes', $result);
+    }
+
+    public function testPluginCommandReturnsFalseWhenNotSet(): void
+    {
+        $result = plugin('check', '/var/log/plugins/test.plg');
+        $this->assertFalse($result);
+    }
 }
