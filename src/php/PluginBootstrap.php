@@ -150,6 +150,56 @@ class PluginBootstrap
         
         // Map the var.ini path
         UnraidStreamWrapper::addMapping('/var/local/emhttp/var.ini', "$varIniDir/var.ini");
+        
+        // Mock /etc/unraid-version - required by many plugins
+        UnraidStreamWrapper::addMockContent(
+            '/etc/unraid-version',
+            "version=\"7.0.0\"\n"
+        );
+        
+        // Mock /var/run/dockerd.pid for Docker running check
+        UnraidStreamWrapper::addMockContent(
+            '/var/run/dockerd.pid',
+            "12345\n"
+        );
+    }
+    
+    /**
+     * Create a plugin temp directory structure with optional pre-created files
+     * 
+     * This is useful for plugins that have initialization code that checks for
+     * file existence (e.g., log files) which can cause infinite loops if the
+     * file doesn't exist and the init code calls functions that also check for it.
+     * 
+     * @param string $pluginName Plugin name for the temp directory
+     * @param array<string, string|null> $files Files to pre-create. Keys are relative paths,
+     *                                          values are content (null = just touch the file)
+     * @return string The base temp directory path
+     */
+    public static function createPluginTempDir(string $pluginName, array $files = []): string
+    {
+        $baseDir = sys_get_temp_dir() . '/' . $pluginName;
+        
+        if (!is_dir($baseDir)) {
+            mkdir($baseDir, 0777, true);
+        }
+        
+        foreach ($files as $relativePath => $content) {
+            $fullPath = $baseDir . '/' . ltrim($relativePath, '/');
+            $dir = dirname($fullPath);
+            
+            if (!is_dir($dir)) {
+                mkdir($dir, 0777, true);
+            }
+            
+            if ($content === null) {
+                touch($fullPath);
+            } else {
+                file_put_contents($fullPath, $content);
+            }
+        }
+        
+        return $baseDir;
     }
     
     /**
