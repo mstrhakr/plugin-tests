@@ -22,34 +22,36 @@ if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
 
 # Ensure working directory is clean
 $gitStatus = git status --porcelain
-if ($gitStatus) {
+if ($gitStatus -and -not $WhatIf) {
     Fail "Working directory is not clean. Commit or stash changes first."
+} elseif ($WhatIf -and $gitStatus) {
+    Write-Host "WhatIf: Working directory is not clean. Changes would need to be committed or stashed first."
 }
 
 # Get current version from latest tag if not provided
 if (-not $Version) {
     $lastTag = git describe --tags --abbrev=0 2>$null
     if ($lastTag -match '^v(\d+\.\d+\.\d+)$') {
-        $Version = [version]($lastTag.TrimStart('v'))
-        $Version = "{0}.{1}.{2}" -f $Version.Major, $Version.Minor, ($Version.Build + 1)
+        $currentVersion = [version]($lastTag.TrimStart('v'))
+        $newVersion = "{0}.{1}.{2}" -f $currentVersion.Major, $currentVersion.Minor, ($currentVersion.Build + 1)
     }
     else {
-        $Version = "0.1.0"
+        Fail "No valid version tag found. Please provide a version using -Version parameter."
     }
 }
 
-$tag = "v$Version"
+$tag = "v$newVersion"
 
 # Make a release commit (optional, e.g. update CHANGELOG or version file)
 # Here, just create an empty commit for the tag
 
 $commitMsg = "Release $tag"
 if ($WhatIf) {
-    Write-Host "Last tag: $lastTag"
-    Write-Host "New version: $Version"
-    Write-Host "Would create commit with message: '$commitMsg'"
-    Write-Host "Would create tag: '$tag'"
-    Write-Host "Would push commit and tag to origin."
+    Write-Host "WhatIf: Last tag: $lastTag"
+    Write-Host "WhatIf: New version: $newVersion"
+    Write-Host "WhatIf: Would create commit with message: '$commitMsg'"
+    Write-Host "WhatIf: Would create tag: '$tag'"
+    Write-Host "WhatIf: Would push commit and tag to origin."
     exit 0
 }
 else {
