@@ -69,6 +69,11 @@ namespace PluginTests\Mocks {
             return self::$pluginConfigs[$plugin] ?? [];
         }
 
+        // Mock for the Unraid logger command to suppress warnings in test environments
+        public function logger($msg) {
+            // No-op: suppress logger command in tests
+        }
+
         /**
          * Add a log entry
          *
