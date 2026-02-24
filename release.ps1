@@ -6,7 +6,8 @@
 # 4. Create a tag (vX.Y.Z) and push it to origin
 
 param(
-    [string]$Version = ""
+    [string]$Version = "",
+    [switch]$WhatIf
 )
 
 function Fail($msg) {
@@ -31,7 +32,8 @@ if (-not $Version) {
     if ($lastTag -match '^v(\d+\.\d+\.\d+)$') {
         $Version = [version]($lastTag.TrimStart('v'))
         $Version = "{0}.{1}.{2}" -f $Version.Major, $Version.Minor, ($Version.Build + 1)
-    } else {
+    }
+    else {
         $Version = "0.1.0"
     }
 }
@@ -42,20 +44,27 @@ $tag = "v$Version"
 # Here, just create an empty commit for the tag
 
 $commitMsg = "Release $tag"
-if (-not (git commit --allow-empty -m "$commitMsg")) {
-    Fail "Failed to create release commit."
+if ($WhatIf) {
+    Write-Host "Would create commit with message: '$commitMsg'"
+    Write-Host "Would create tag: '$tag'"
+    Write-Host "Would push commit and tag to origin."
+    exit 0
 }
+else {
+    if (-not (git commit --allow-empty -m "$commitMsg")) {
+        Fail "Failed to create release commit."
+    }
 
-if (-not (git tag $tag)) {
-    Fail "Failed to create tag $tag."
+    if (-not (git tag $tag)) {
+        Fail "Failed to create tag $tag."
+    }
+
+    if (-not (git push origin HEAD)) {
+        Fail "Failed to push commit."
+    }
+
+    if (-not (git push origin $tag)) {
+        Fail "Failed to push tag $tag."
+    }
 }
-
-if (-not (git push origin HEAD)) {
-    Fail "Failed to push commit."
-}
-
-if (-not (git push origin $tag)) {
-    Fail "Failed to push tag $tag."
-}
-
 Write-Host "Release $tag created and pushed. CI will handle floating tags and release."
