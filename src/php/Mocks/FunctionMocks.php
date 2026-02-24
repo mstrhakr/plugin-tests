@@ -69,8 +69,14 @@ namespace PluginTests\Mocks {
             return self::$pluginConfigs[$plugin] ?? [];
         }
 
-        // Mock for the Unraid logger command to suppress warnings in test environments
-        public function logger($msg) {
+        /**
+         * Mock for the Unraid logger command to suppress warnings in test environments
+         *
+         * @param string $msg
+         * @return void
+         */
+        public static function logger(string $msg): void
+        {
             // No-op: suppress logger command in tests
         }
 
@@ -914,6 +920,20 @@ namespace {
         function markdown(?string $text): string
         {
             return Markdown($text);
+        }
+    }
+
+    // Global logger() function for compatibility with Unraid plugin code
+    if (!function_exists('logger')) {
+        /**
+         * Global logger mock for test environments.
+         *
+         * @param string $msg
+         * @return void
+         */
+        function logger(string $msg): void
+        {
+            FunctionMocks::logger($msg);
         }
     }
 
