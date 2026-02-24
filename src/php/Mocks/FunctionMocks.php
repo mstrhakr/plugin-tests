@@ -28,6 +28,29 @@ namespace PluginTests\Mocks {
         /** @var array<string, mixed> Scale status values */
         private static array $scaleStatus = [];
 
+        /** @var array<int, callable> Callbacks fired when plugin config changes */
+        private static array $onConfigChangeCallbacks = [];
+
+        /**
+         * Register a callback to run whenever plugin config is set or reset.
+         * Use this to invalidate caches that depend on parse_plugin_cfg() results.
+         *
+         * @param callable $callback
+         */
+        public static function onConfigChange(callable $callback): void
+        {
+            self::$onConfigChangeCallbacks[] = $callback;
+        }
+
+        /**
+         * Fire all registered config-change callbacks
+         */
+        private static function fireConfigChangeCallbacks(): void
+        {
+            foreach (self::$onConfigChangeCallbacks as $cb) {
+                $cb();
+            }
+        }
         /** @var array<string, array<string, string>> Plugin attributes indexed by file path */
         private static array $pluginAttributes = [];
 
@@ -43,6 +66,7 @@ namespace PluginTests\Mocks {
             self::$logs = [];
             self::$csrfToken = 'test-csrf-token-12345';
             self::$scaleStatus = [];
+            self::fireConfigChangeCallbacks();
             self::$pluginAttributes = [];
             self::$pluginCommandOutputs = [];
         }
@@ -56,6 +80,7 @@ namespace PluginTests\Mocks {
         public static function setPluginConfig(string $plugin, array $config): void
         {
             self::$pluginConfigs[$plugin] = $config;
+            self::fireConfigChangeCallbacks();
         }
 
         /**
