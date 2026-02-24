@@ -45,6 +45,8 @@ $tag = "v$Version"
 
 $commitMsg = "Release $tag"
 if ($WhatIf) {
+    Write-Host "Last tag: $lastTag"
+    Write-Host "New version: $Version"
     Write-Host "Would create commit with message: '$commitMsg'"
     Write-Host "Would create tag: '$tag'"
     Write-Host "Would push commit and tag to origin."
