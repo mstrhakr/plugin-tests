@@ -40,12 +40,22 @@ $tag = "v$Version"
 
 # Make a release commit (optional, e.g. update CHANGELOG or version file)
 # Here, just create an empty commit for the tag
+
 $commitMsg = "Release $tag"
-git commit --allow-empty -m "$commitMsg" || Fail "Failed to create release commit."
+if (-not (git commit --allow-empty -m "$commitMsg")) {
+    Fail "Failed to create release commit."
+}
 
-git tag $tag || Fail "Failed to create tag $tag."
+if (-not (git tag $tag)) {
+    Fail "Failed to create tag $tag."
+}
 
-git push origin HEAD || Fail "Failed to push commit."
-git push origin $tag || Fail "Failed to push tag $tag."
+if (-not (git push origin HEAD)) {
+    Fail "Failed to push commit."
+}
+
+if (-not (git push origin $tag)) {
+    Fail "Failed to push tag $tag."
+}
 
 Write-Host "Release $tag created and pushed. CI will handle floating tags and release."
