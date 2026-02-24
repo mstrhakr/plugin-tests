@@ -55,19 +55,23 @@ if ($WhatIf) {
     exit 0
 }
 else {
-    if (-not (git commit --allow-empty -m "$commitMsg")) {
+    git commit --allow-empty -m "$commitMsg"
+    if ($LASTEXITCODE -ne 0) {
         Fail "Failed to create release commit."
     }
 
-    if (-not (git tag $tag)) {
+    git tag $tag
+    if ($LASTEXITCODE -ne 0) {
         Fail "Failed to create tag $tag."
     }
 
-    if (-not (git push origin HEAD)) {
+    git push origin HEAD
+    if ($LASTEXITCODE -ne 0) {
         Fail "Failed to push commit."
     }
 
-    if (-not (git push origin $tag)) {
+    git push origin $tag
+    if ($LASTEXITCODE -ne 0) {
         Fail "Failed to push tag $tag."
     }
 }
