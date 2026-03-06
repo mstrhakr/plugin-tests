@@ -38,6 +38,8 @@ if (-not $Version) {
     else {
         Fail "No valid version tag found. Please provide a version using -Version parameter."
     }
+} else {
+    $newVersion = $Version
 }
 
 $tag = "v$newVersion"
