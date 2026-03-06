@@ -70,7 +70,7 @@ class Defaults
         return [
             'name' => $name,
             'path' => $path,
-            'compose_file' => "$path/docker-compose.yml",
+            'compose_file' => "$path/compose.yaml",
             'autostart' => 'yes',
             'autoupdate' => 'no',
             'priority' => '50',
