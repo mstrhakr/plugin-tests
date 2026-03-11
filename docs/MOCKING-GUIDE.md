@@ -25,24 +25,28 @@ The `PluginBootstrap::init()` function automatically provides stub content for c
 These functions are provided automatically by `FunctionMocks.php`:
 
 ### Unraid Configuration Functions
+
 | Function | Behavior |
 |----------|----------|
 | `parse_plugin_cfg($plugin, $default)` | Returns config set via `FunctionMocks::setPluginConfig()` |
 | `plugin($action, $path)` | Returns mock version/URL/changes based on action |
 
 ### Translation Functions
+
 | Function | Behavior |
 |----------|----------|
 | `_($text, ...$args)` | Returns text with sprintf formatting |
 | `Markdown($text)` / `markdown($text)` | Returns text (uses Parsedown if available) |
 
 ### Docker Mock Classes
+
 | Class | Description |
 |-------|-------------|
 | `DockerClient` | Mock Docker API client with container operations |
 | `DockerTemplates` | Mock template management |
 
 ### File System Functions
+
 | Function | Behavior |
 |----------|----------|
 | `readJsonFile($path)` | Reads and decodes JSON files |
@@ -50,6 +54,7 @@ These functions are provided automatically by `FunctionMocks.php`:
 | `file_put_contents_atomic($path, $data)` | Writes to temp location with atomic semantics |
 
 ### Logging Functions  
+
 | Function | Behavior |
 |----------|----------|
 | `logger($msg, $type)` | Captures to `FunctionMocks::getLogs()` |
@@ -118,6 +123,7 @@ $result = includeWithSwitch($path, 'saveConfig', [
 Depending on your plugin, you may need to mock additional system files:
 
 ### Not Yet Mocked (Add if needed)
+
 - `/usr/local/emhttp/plugins/dynamix/include/Preselect.php` - CSS/JS preloading
 - `/usr/local/emhttp/plugins/dynamix.docker.manager/include/Helpers.php` - Docker-specific helpers
 - `/usr/local/emhttp/state/var.ini` - Server state variables
@@ -159,6 +165,7 @@ PluginBootstrap::init(
 ## Debugging Tips
 
 ### Check Mapped Paths
+
 ```php
 use PluginTests\StreamWrapper\UnraidStreamWrapper;
 
@@ -168,12 +175,15 @@ print_r($mappings);
 ```
 
 ### Check Mock Content
+
 ```php
 $mocks = UnraidStreamWrapper::getMockContent();
 print_r($mocks);
 ```
 
 ### Verify File Resolution
+
 The stream wrapper logs path resolutions to help debug issues:
+
 - Local files take precedence over mock content
 - Mock content is used only if no local mapping exists

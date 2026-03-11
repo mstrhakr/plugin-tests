@@ -19,6 +19,7 @@ Unit tests with mocks (what plugin-tests currently provides) are excellent for t
 - Plugin installation/upgrade flows
 
 Manual testing catches these, but it's:
+
 - Time-consuming
 - Not repeatable
 - Can't run in CI/CD
@@ -188,30 +189,35 @@ integration:
 ```
 
 **Recommended usage:**
+
 - Unit tests: Run on every commit (fast, mocked)
 - Integration tests: Run before release, or on PR merge (slow, real)
 
 ## Implementation Phases
 
 ### Phase 1: Core Infrastructure
+
 - [ ] `HypervisorInterface` - Abstract interface for VM operations
 - [ ] `ProxmoxClient` - First implementation (most common in homelab)
 - [ ] `SSHConnection` - File sync and command execution
 - [ ] Configuration loader and validator
 
 ### Phase 2: CLI & UX
+
 - [ ] `integration:setup` - Interactive configuration wizard
 - [ ] `integration:run` - Test execution command
 - [ ] `integration:status` - Check VM state
 - [ ] Progress output and result formatting
 
 ### Phase 3: Additional Hypervisors
+
 - [ ] `LibvirtClient` - For QEMU/KVM users
 - [ ] `VirtualBoxClient` - For desktop virtualization
 - [ ] `HyperVClient` - For Windows hosts
 - [ ] `ESXiClient` - For enterprise VMware
 
 ### Phase 4: Advanced Features
+
 - [ ] Parallel test execution
 - [ ] Test result caching
 - [ ] Automatic snapshot management
@@ -224,36 +230,40 @@ To use integration testing, developers would need:
 1. **Unraid VM** - Running on any supported hypervisor
    - Can use 30-day trial or purchased license
    - Configured with desired test state (Docker containers, shares, etc.)
-   
+
 2. **Clean snapshot** - A snapshot of the VM in a known-good state
    - Created after initial setup
    - Will be restored after every test run
-   
+
 3. **API access** - Credentials for hypervisor API
    - Proxmox: API token with VM.* permissions
    - Others: Equivalent access level
-   
+
 4. **SSH access** - Key-based auth to the Unraid VM
    - For file sync and test execution
 
 ## Alternatives Considered
 
 ### SSH-only (no VM orchestration)
+
 - **Pro:** Simpler, no hypervisor dependency
 - **Con:** No snapshot restore, tests can corrupt state
 - **Verdict:** Insufficient for destructive testing
 
 ### Test runner plugin on Unraid
+
 - **Pro:** HTTP API instead of SSH
 - **Con:** Arbitrary code execution risk, complex security model
 - **Verdict:** Security concerns outweigh benefits
 
 ### Docker-based Unraid
+
 - **Pro:** Would be ideal if possible
 - **Con:** Unraid IS the host OS, can't containerize it
 - **Verdict:** Not technically feasible
 
 ### State provider plugin (read-only)
+
 - **Pro:** Safe, improves mock accuracy
 - **Con:** Still testing against mocks, not real system
 - **Verdict:** Complementary, not a replacement
