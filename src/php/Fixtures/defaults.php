@@ -59,41 +59,126 @@ class Defaults
     }
 
     /**
-     * Get a typical compose stack configuration for testing
+     * Get a typical Docker container fixture
      *
-     * @param string $name Stack name
-     * @param string $path Stack path
+     * @param string $name Container name
+     * @param string $image Image name
+     * @param string $state Container state (running, exited, paused)
      * @return array<string, mixed>
      */
-    public static function composeStack(string $name = 'mystack', string $path = '/mnt/user/appdata/mystack'): array
+    public static function container(string $name = 'test-container', string $image = 'alpine:latest', string $state = 'running'): array
     {
         return [
-            'name' => $name,
-            'path' => $path,
-            'compose_file' => "$path/compose.yaml",
-            'autostart' => 'yes',
-            'autoupdate' => 'no',
-            'priority' => '50',
+            'Name' => $name,
+            'Image' => $image,
+            'State' => $state,
+            'Status' => $state === 'running' ? 'Up 2 hours' : 'Exited (0) 1 hour ago',
+            'Id' => hash('sha256', $name),
+            'Created' => '2025-01-01T00:00:00Z',
+            'Ports' => [],
+            'Mounts' => [],
+            'Labels' => [],
+            'NetworkSettings' => [
+                'Networks' => [
+                    'bridge' => [
+                        'IPAddress' => '172.17.0.2',
+                    ],
+                ],
+            ],
         ];
     }
 
     /**
-     * Get default compose manager configuration
+     * Get a typical user configuration
      *
+     * @param string $name Username
+     * @param string $desc User description
      * @return array<string, mixed>
      */
-    public static function composeManagerConfig(): array
+    public static function user(string $name = 'testuser', string $desc = ''): array
     {
         return [
-            'COMPOSE_HTTP_TIMEOUT' => '300',
-            'AUTOSTART' => 'yes',
-            'AUTOSTART_WAIT_FOR_DOCKER' => 'yes',
-            'AUTOSTART_DOCKER_WAIT_TIMEOUT' => '60',
-            'AUTOSTART_TIMEOUT' => '300',
-            'SHUTDOWN_TIMEOUT' => '30',
-            'MAX_RETRIES' => '3',
-            'RETRY_DELAY' => '5',
-            'DEBUG' => 'no',
+            'name' => $name,
+            'desc' => $desc,
+            'idx' => '1000',
+        ];
+    }
+
+    /**
+     * Get a typical pool (cache) configuration
+     *
+     * @param string $name Pool name
+     * @param string $fsType Filesystem type
+     * @return array<string, mixed>
+     */
+    public static function pool(string $name = 'cache', string $fsType = 'btrfs'): array
+    {
+        return [
+            'name' => $name,
+            'fsType' => $fsType,
+            'slots' => '1',
+            'devices' => 'nvme0n1',
+            'fsSize' => '500107862016',
+            'fsFree' => '250053931008',
+            'fsStatus' => 'Mounted',
+        ];
+    }
+
+    /**
+     * Get a typical notification fixture
+     *
+     * @param string $event Notification event
+     * @param string $subject Notification subject
+     * @param string $importance Notification importance (normal, warning, alert)
+     * @return array<string, mixed>
+     */
+    public static function notification(string $event = 'test', string $subject = 'Test Notification', string $importance = 'normal'): array
+    {
+        return [
+            'event' => $event,
+            'subject' => $subject,
+            'description' => '',
+            'importance' => $importance,
+            'timestamp' => time(),
+        ];
+    }
+
+    /**
+     * Get a typical network interface configuration
+     *
+     * @param string $name Interface name
+     * @return array<string, mixed>
+     */
+    public static function networkInterface(string $name = 'eth0'): array
+    {
+        return [
+            'name' => $name,
+            'ipaddr' => '192.168.1.100',
+            'netmask' => '255.255.255.0',
+            'gateway' => '192.168.1.1',
+            'mtu' => '1500',
+            'bonding' => 'no',
+            'bridging' => 'no',
+        ];
+    }
+
+    /**
+     * Get a typical plugin info fixture
+     *
+     * @param string $name Plugin name
+     * @param string $version Plugin version
+     * @return array<string, mixed>
+     */
+    public static function pluginInfo(string $name = 'test.plugin', string $version = '2025.01.01'): array
+    {
+        return [
+            'name' => $name,
+            'version' => $version,
+            'author' => 'Test Author',
+            'pluginURL' => '',
+            'support' => '',
+            'icon' => 'icon-plugin',
+            'launch' => '',
         ];
     }
 }
