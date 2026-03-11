@@ -101,14 +101,6 @@ test_setup() {
     assert_file_contains "$compose_file" "image: alpine"
 }
 
-@test "create_test_stack creates directory structure" {
-    local stack_dir
-    stack_dir=$(create_test_stack "mystack")
-    
-    assert_dir_exists "$stack_dir"
-    assert_file_exists "$stack_dir/docker-compose.yml"
-}
-
 @test "create_test_config creates config file" {
     local config_file
     config_file=$(create_test_config "$TEST_TEMP_DIR/test.cfg" \

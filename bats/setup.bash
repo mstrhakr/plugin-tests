@@ -77,19 +77,6 @@ services:
     echo "$path"
 }
 
-# Create a test stack directory structure
-# Usage: create_test_stack [name]
-create_test_stack() {
-    local name="${1:-teststack}"
-    local stack_dir="$TEST_TEMP_DIR/$name"
-    
-    mkdir -p "$stack_dir"
-    # Suppress output from create_test_compose_file
-    create_test_compose_file "$stack_dir/compose.yaml" > /dev/null
-    
-    echo "$stack_dir"
-}
-
 # Create a mock config file
 # Usage: create_test_config [path] [key=value pairs...]
 create_test_config() {
