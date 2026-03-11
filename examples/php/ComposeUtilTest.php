@@ -12,8 +12,6 @@ declare(strict_types=1);
 namespace PluginTests\Examples;
 
 use PluginTests\TestCase;
-use PluginTests\Fixtures\Defaults;
-
 class ComposeUtilTest extends TestCase
 {
     /**
@@ -42,8 +40,14 @@ class ComposeUtilTest extends TestCase
      */
     public function testWithDefaultFixture(): void
     {
-        // Use predefined fixture
-        $this->mockPluginConfig('compose.manager', Defaults::composeManagerConfig());
+        // Define your own fixture data in your bootstrap or test
+        $this->mockPluginConfig('compose.manager', [
+            'COMPOSE_HTTP_TIMEOUT' => '300',
+            'AUTOSTART' => 'yes',
+            'MAX_RETRIES' => '3',
+            'RETRY_DELAY' => '5',
+            'DEBUG' => 'no',
+        ]);
 
         $cfg = parse_plugin_cfg('compose.manager');
 
