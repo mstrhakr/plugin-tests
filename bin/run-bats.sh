@@ -13,8 +13,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Check if we're in the framework directory or project root
 if [[ -f "$SCRIPT_DIR/../bats/setup.bash" ]]; then
-    # We're in plugin-tests/bin, workspace is grandparent
-    WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+    # We're in plugin-tests/bin (tests/framework/bin), workspace is 3 levels up
+    WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 elif [[ -f "$SCRIPT_DIR/tests/framework/bats/setup.bash" ]]; then
     # We're in project root with framework as submodule
     WORKSPACE_ROOT="$SCRIPT_DIR"
