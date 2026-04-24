@@ -25,7 +25,7 @@ run_php() {
     docker run --rm \
         -v "$WORKSPACE_ROOT:/code" \
         -w /code \
-        php:8.2-cli \
+        php:8.3-cli \
         sh -c "composer install --quiet 2>/dev/null; vendor/bin/phpunit $*"
 }
 

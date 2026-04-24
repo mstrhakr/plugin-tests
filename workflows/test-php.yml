@@ -6,7 +6,7 @@ on:
       php-version:
         description: 'PHP version to use'
         required: false
-        default: '8.2'
+        default: '8.3'
         type: string
       test-directory:
         description: 'Directory containing tests'

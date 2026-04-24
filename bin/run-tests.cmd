@@ -38,7 +38,7 @@ exit /b 1
 
 :run_php
 echo Running PHP tests...
-docker run --rm -v "%DOCKER_MOUNT%:/code" -w /code php:8.2-cli sh -c "composer install --quiet 2>/dev/null; vendor/bin/phpunit %EXTRA_ARGS%"
+docker run --rm -v "%DOCKER_MOUNT%:/code" -w /code php:8.3-cli sh -c "composer install --quiet 2>/dev/null; vendor/bin/phpunit %EXTRA_ARGS%"
 goto :eof
 
 :run_bats
